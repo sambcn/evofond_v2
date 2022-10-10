@@ -15,7 +15,7 @@ from DialogDelete import DialogDelete
 class HydrogramTab(Tab):
     
     def __init__(self, tabBar):
-        super().__init__(tabBar, "Hydrogramme", "..\\icons\\base\\42699-water-wave-icon.png")
+        super().__init__(tabBar, "Hydrogramme", ".\\src\\main\\icons\\base\\42699-water-wave-icon.png")
         self.layoutList = QVBoxLayout()
         self.layoutList.addWidget(QLabel("Liste des hydrogrammes : "))
         self.hydrogramList = QListWidget()
@@ -25,15 +25,15 @@ class HydrogramTab(Tab):
        
 
         binWidget = QPushButton(" DELETE")
-        binWidget.setIcon(QIcon("..\\icons\\base\\trash.png"))
+        binWidget.setIcon(QIcon(".\\src\\main\\icons\\base\\trash.png"))
         binWidget.released.connect(self.deleteButtonReleased)
         copyWidget = QPushButton(" COPY")
-        copyWidget.setIcon(QIcon("..\\icons\\base\\copy.png"))
+        copyWidget.setIcon(QIcon(".\\src\\main\\icons\\base\\copy.png"))
         copyWidget.released.connect(self.copyButtonReleased)
         editWidget = QPushButton(" EDIT")
-        editWidget.setIcon(QIcon("..\\icons\\base\\edit.png"))
+        editWidget.setIcon(QIcon(".\\src\\main\\icons\\base\\edit.png"))
         newHydrogramButton = QPushButton(" NEW")
-        newHydrogramButton.setIcon(QIcon("..\\icons\\base\\add.png"))
+        newHydrogramButton.setIcon(QIcon(".\\src\\main\\icons\\base\\add.png"))
         newHydrogramButton.released.connect(self.newHydrogramButtonReleased)
         self.layoutList.addWidget(newHydrogramButton)
         self.layoutActions = QHBoxLayout()

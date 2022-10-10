@@ -14,12 +14,12 @@ import pandas as pd
 class ProfileTab(Tab):
     
     def __init__(self, tabBar):
-        super().__init__(tabBar, "Profil", "..\\icons\\base\\profile.jpg")
+        super().__init__(tabBar, "Profil", ".\\src\\main\\icons\\base\\profile.jpg")
 
         self.paramLayout = QVBoxLayout()
         self.sectionTypeList = QComboBox()
-        self.sectionTypeList.addItem(QIcon("..\\icons\\base\\rectangularSection.png"), "Rectangulaire")
-        self.sectionTypeList.addItem(QIcon("..\\icons\\base\\trapezoidalSection.png"), "Trapézoïdale")
+        self.sectionTypeList.addItem(QIcon(".\\src\\main\\icons\\base\\rectangularSection.png"), "Rectangulaire")
+        self.sectionTypeList.addItem(QIcon(".\\src\\main\\icons\\base\\trapezoidalSection.png"), "Trapézoïdale")
         self.sectionTypeList.currentIndexChanged.connect(self.sectionTypeListIndexChanged)
         self.paramLayout.addWidget(self.sectionTypeList)
 

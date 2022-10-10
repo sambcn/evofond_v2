@@ -14,7 +14,7 @@ class MainWindow(QMainWindow):
         super(MainWindow,self).__init__(*args, **kwargs)
 
         self.setWindowTitle("Evofond")
-        self.setWindowIcon(QIcon("..\\icons\\base\\evofond.jpg"))
+        self.setWindowIcon(QIcon(".\\src\\main\\icons\\base\\evofond.jpg"))
 
         self.tabs = TabBar()
 
