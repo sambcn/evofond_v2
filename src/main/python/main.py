@@ -1,5 +1,5 @@
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
-from PyQt5.QtWidgets import QMainWindow
+from fbs_runtime.platform import is_windows
 
 from MainWindow import MainWindow
 
@@ -7,7 +7,9 @@ from MainWindow import MainWindow
 
 if __name__ == '__main__':
     appctxt = ApplicationContext()       # 1. Instantiate ApplicationContext
-    window = MainWindow()
+    if is_windows():
+        appctxt.app.setStyle("Fusion")
+    window = MainWindow(appctxt)
     # window.resize(250, 150)
     window.show()
     exit_code = appctxt.app.exec_()      # 2. Invoke appctxt.app.exec_()

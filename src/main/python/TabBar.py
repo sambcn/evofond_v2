@@ -10,8 +10,8 @@ from ResultsTab import ResultsTab
 
 class TabBar(QTabWidget):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super(TabBar, self).__init__(parent=parent)
         
         self.projectTab = ProjectTab(self)
         self.hydrogramtTab = HydrogramTab(self)
@@ -37,9 +37,12 @@ class TabBar(QTabWidget):
         return self.projectTab.currentProject
 
     def refresh(self):
-        for i in range(1, self.count()):
+        for i in range(self.count()):
             self.widget(i).refresh()
 
     def clicked(self, index):
         if index == 0:
             self.projectTab.updateText()
+
+    def getResource(self, path):
+        return self.parent().getResource(path)

@@ -1,9 +1,9 @@
 from Tab import Tab
 from Project import Project
 from PyQt5.QtWidgets import (
-   QPushButton, QVBoxLayout, QLabel, QFileDialog
+   QPushButton, QHBoxLayout, QLabel, QFileDialog, QMessageBox, QVBoxLayout
 )
-from PyQt5.QtCore import Qt, QDateTime
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 
 from DialogEditProject import DialogEditProject
@@ -14,37 +14,41 @@ import pickle as pkl
 class ProjectTab(Tab):
     
     def __init__(self, tabBar):
-        super().__init__(tabBar, "Projet", ".\\src\\main\\icons\\base\\project.png")
+        super(ProjectTab, self).__init__(tabBar, "Projet", tabBar.getResource("images\\project.png"))
         
         self.currentProject = Project()
         self.newProjectButton = QPushButton(" Nouveau projet")
-        self.newProjectButton.setIcon(QIcon(".\\src\\main\\icons\\base\\add.png"))
+        self.newProjectButton.setIcon(QIcon(self.getResource("images\\add.png")))
         self.newProjectButton.released.connect(self.newProjectButtonReleased)
         self.loadProjectButton = QPushButton(" Charger projet")
-        self.loadProjectButton.setIcon(QIcon(".\\src\\main\\icons\\base\\load.png"))
+        self.loadProjectButton.setIcon(QIcon(self.getResource("images\\load.png")))
         self.loadProjectButton.released.connect(self.loadProjectButtonReleased)
         self.saveProjectButton = QPushButton(" Enregistrer")
-        self.saveProjectButton.setIcon(QIcon(".\\src\\main\\icons\\base\\save.png"))
+        self.saveProjectButton.setIcon(QIcon(self.getResource("images\\save.png")))
         self.saveProjectButton.released.connect(self.saveProjectButtonReleased)
         self.saveAsProjectButton = QPushButton(" Enregistrer sous")
-        self.saveAsProjectButton.setIcon(QIcon(".\\src\\main\\icons\\base\\saveAs.png"))
+        self.saveAsProjectButton.setIcon(QIcon(self.getResource("images\\saveAs.png")))
         self.saveAsProjectButton.released.connect(self.saveAsProjectButtonReleased)
         self.text = QLabel(str(self.currentProject))
         self.editTextButton = QPushButton(" Modifier")
-        self.editTextButton.setIcon(QIcon(".\\src\\main\\icons\\base\\edit.png"))
+        self.editTextButton.setIcon(QIcon(self.getResource("images\\edit.png")))
         self.editTextButton.released.connect(self.editTextButtonRealeased)
-        self.layout1 = QVBoxLayout()
-        self.layout2 = QVBoxLayout()
+        self.vLayout = QVBoxLayout()
+        self.layout1 = QHBoxLayout()
+        self.layout2 = QHBoxLayout()        
         self.layout1.addWidget(self.newProjectButton)
         self.layout1.addWidget(self.loadProjectButton)
         self.layout1.addWidget(self.saveProjectButton)
         self.layout1.addWidget(self.saveAsProjectButton)
-        self.layout2.addWidget(self.text, alignment= (Qt.AlignBottom | Qt.AlignHCenter))
-        self.layout2.addWidget(self.editTextButton, alignment=(Qt.AlignTop | Qt.AlignHCenter))
-        self.layout.addLayout(self.layout1)
-        self.layout.addLayout(self.layout2)
+        self.layout2.addWidget(self.text, alignment=Qt.AlignRight)
+        self.layout2.addWidget(self.editTextButton, alignment=(Qt.AlignLeft))
+        self.vLayout.addLayout(self.layout1)
+        self.vLayout.addLayout(self.layout2)
+        self.layout.addLayout(self.vLayout)
 
     def newProjectButtonReleased(self):
+        if not(self.leavingProjectCheck()):
+            return
         self.currentProject = Project()
         self.editTextButtonRealeased()
         self.updateText()
@@ -52,14 +56,19 @@ class ProjectTab(Tab):
         return
 
     def loadProjectButtonReleased(self):
+        if not(self.leavingProjectCheck()):
+            return
         dlg = QFileDialog(self)
         dlg.setFileMode(QFileDialog.ExistingFile)
         dlg.setAcceptMode(QFileDialog.AcceptOpen)
         dlg.setNameFilter("*.evf")
         if dlg.exec():
-            self.currentProject = pkl.load(open(dlg.selectedFiles()[-1], 'rb'))
-            self.updateText()
-            self.tabBar.refresh()
+            try:
+                self.currentProject = pkl.load(open(dlg.selectedFiles()[-1], 'rb'))
+                self.updateText()
+                self.tabBar.refresh()
+            except (AttributeError, EOFError):
+                QMessageBox.critical(self, "Impossible d'ouvrir ce fichier", "Le fichier sélectionné est corrompu, impossible de le lire")
         return
 
     def saveProjectButtonReleased(self):
@@ -96,6 +105,16 @@ class ProjectTab(Tab):
     def updateText(self):
         self.text.setText(str(self.currentProject))
         return
-    
 
-
+    def leavingProjectCheck(self):
+        if self.getProject().needToBeSaved:
+            button = QMessageBox.question(self, "Modifications non enregistrées", "Souhaitez vous enregistrez avant de quitter ?")
+            if button == QMessageBox.Yes:
+                self.saveProjectButtonReleased()
+                if self.getProject().needToBeSaved:
+                    return False
+                return True
+            if button == QMessageBox.No:
+                return True
+        else:
+            return True

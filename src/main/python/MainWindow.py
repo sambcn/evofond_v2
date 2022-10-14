@@ -1,22 +1,31 @@
 from PyQt5.QtWidgets import (
-    QMainWindow, QApplication, QWidget, QHBoxLayout, QStyle, 
-    QLabel, QCheckBox, QComboBox, QListWidget, QLineEdit,
-    QLineEdit, QSpinBox, QDoubleSpinBox, QSlider, QTabWidget, QSizePolicy
+    QMainWindow, QMessageBox
 )
-from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 
 from TabBar import TabBar
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, appctxt, *args, **kwargs):
         super(MainWindow,self).__init__(*args, **kwargs)
 
-        self.setWindowTitle("Evofond")
-        self.setWindowIcon(QIcon(".\\src\\main\\icons\\base\\evofond.jpg"))
+        self.appctxt = appctxt
 
-        self.tabs = TabBar()
+        self.setWindowTitle("Evofond")
+        self.setWindowIcon(QIcon(self.getResource("images\\evofond.jpg")))
+
+        self.tabs = TabBar(parent=self)
 
         self.setCentralWidget(self.tabs)
         self.showMaximized()
+
+    def getResource(self, path):
+        return self.appctxt.get_resource(path)
+
+    def closeEvent(self, event):
+        # do stuff
+        if not(self.tabs.projectTab.leavingProjectCheck()):
+            event.ignore()
+        else:
+            event.accept() # let the window close

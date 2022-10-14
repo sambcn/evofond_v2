@@ -1,9 +1,12 @@
-from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel, QComboBox, QWidget, QDoubleSpinBox, QGridLayout, QPushButton, QLineEdit, QMessageBox
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel, QComboBox, QWidget, QDoubleSpinBox, QGridLayout, QPushButton, QLineEdit, QMessageBox, QFileDialog
+from PyQt5.QtGui import QPixmap, QFont
+from PyQt5.QtCore import Qt
+
+from Hydrogram import Hydrogram
 
 class DialogNewHydrogram(QDialog):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent):
         super().__init__(parent)
 
         self.setWindowTitle("New hydrogram")
@@ -20,22 +23,36 @@ class DialogNewHydrogram(QDialog):
         self.hydroArgs = dict()
         hlayout = QHBoxLayout()
         vlayout = QVBoxLayout()
-        methodList = QComboBox()
-        methodList.addItem("Lavabre")
-        methodList.addItem("Importer")
-        methodList.addItem("Manuel")
-        methodList.currentIndexChanged.connect(self.indexChanged)
-        methodList.currentTextChanged.connect(self.textChanged)
-        self.hydroArgs["type"] = methodList.currentText()
+        self.methodList = QComboBox()
+        self.methodList.addItem("Importer")
+        self.methodList.addItem("Lavabre")
+        self.methodList.addItem("Manuel")
+        self.methodList.currentIndexChanged.connect(self.indexChanged)
+        self.methodList.currentTextChanged.connect(self.textChanged)
+        self.hydroArgs["type"] = self.methodList.currentText()
         nameField = QLineEdit()
         nameField.setPlaceholderText("Nom de l'hydrogramme")
         nameField.textChanged.connect(self.nameChanged)
         self.hydroArgs["name"] = nameField.text()
-        vlayout.addWidget(methodList)
+        vlayout.addWidget(self.methodList)
         vlayout.addWidget(nameField)
         hlayout.addLayout(vlayout)
 
         self.slayout = QStackedLayout()
+
+        importWidget = QPushButton(" Parcourir ")
+        importWidget.released.connect(self.importButtonReleased)
+        importlayout = QGridLayout()
+        importlayout.addWidget(QLabel("selected file : "), 0, 0, alignment=Qt.AlignRight)
+        self.selectedFile = QLabel("")
+        self.selectedFile.setStyleSheet("border: 1px solid black;padding: 8px; font-family: 'Arial font'; font-size: 14px")
+        importlayout.addWidget(self.selectedFile, 0, 1, alignment=Qt.AlignVCenter)
+        importlayout.addWidget(importWidget, 0, 2, alignment=(Qt.AlignVCenter | Qt.AlignLeft))
+        interwidget = QWidget()
+        interwidget.setFont(QFont('Arial font', 12))
+        interwidget.setLayout(importlayout)
+        self.slayout.addWidget(interwidget)
+
         lavabreLayout = QHBoxLayout()
         lavabreLayout1 = QGridLayout()
         
@@ -86,7 +103,7 @@ class DialogNewHydrogram(QDialog):
 
         lavabreLayout2 = QGridLayout()
         image = QLabel()
-        image.setPixmap(QPixmap('..\\icons\\base\\lavabreFormula.png'))
+        image.setPixmap(QPixmap(self.parent().getResource('images\\lavabreFormula.png')))
         lavabreLayout2.addWidget(image, 0, 0)
 
         lavabreLayout.addLayout(lavabreLayout1)
@@ -95,9 +112,7 @@ class DialogNewHydrogram(QDialog):
         lavabreWidget.setLayout(lavabreLayout)
         self.slayout.addWidget(lavabreWidget)
 
-        importWidget = QPushButton("parcourir")
-        self.slayout.addWidget(importWidget)
-
+        self.slayout.addWidget(QWidget())
 
         hlayout.addLayout(self.slayout)
 
@@ -106,6 +121,15 @@ class DialogNewHydrogram(QDialog):
         ###
         self.layout.addWidget(self.buttonBox)
         self.setLayout(self.layout)
+
+    def importButtonReleased(self):
+        dlg = QFileDialog(self)
+        dlg.setFileMode(QFileDialog.ExistingFile)
+        dlg.setAcceptMode(QFileDialog.AcceptOpen)
+        dlg.setNameFilter("*.csv *.txt")
+        if dlg.exec():
+            self.hydroArgs["path"] = dlg.selectedFiles()[-1]
+            self.selectedFile.setText(self.hydroArgs["path"])
 
     def nameChanged(self, s):
         self.hydroArgs["name"] = s
@@ -141,11 +165,26 @@ class DialogNewHydrogram(QDialog):
         elif self.hydroArgs["name"] in self.parent().getProject().getHydrogramNameList():
             QMessageBox.critical(self, "Error : name already taken", "This name is already taken, please find another one")
             return
-        elif self.hydroArgs["d"]==0:
-            QMessageBox.critical(self, "Error : duration must be strictly positive", "You must give d > 0")
-            return
-        elif self.hydroArgs["tmax"]==0:
-            QMessageBox.critical(self, "Error : t_max must be strictly positive", "You must give t_max > 0")
-            return
-        if True:
-            self.accept()
+        if self.hydroArgs["type"] == self.methodList.itemText(0):
+            if not("path" in self.hydroArgs.keys()):
+                QMessageBox.critical(self, "Error : no file selected", "Please choose a file (.csv or .txt)")
+                return
+            try:
+                self.hydrogram = Hydrogram(self.hydroArgs)
+            except UnicodeDecodeError:
+                QMessageBox.critical(self, "Error : could not open te file", "The file could not be converted. \n Please check that you gave a .csv with at least two columns (time t - water discharge Q)")
+                return
+            except ValueError:
+                QMessageBox.critical(self, "Error : not enough columns", "Less than 2 columns detected. \n Please check that you gave a .csv with at least two columns (time t - water discharge Q)")
+                return
+        if self.hydroArgs["type"] == self.methodList.itemText(1):
+            if self.hydroArgs["d"]==0:
+                QMessageBox.critical(self, "Error : duration must be strictly positive", "You must give d > 0")
+                return
+            elif self.hydroArgs["tmax"]==0:
+                QMessageBox.critical(self, "Error : t_max must be strictly positive", "You must give t_max > 0")
+                return
+            self.hydrogram = Hydrogram(self.hydroArgs)
+        if self.hydroArgs["type"] == self.methodList.itemText(2):
+            self.hydrogram = Hydrogram(self.hydroArgs)
+        self.accept()

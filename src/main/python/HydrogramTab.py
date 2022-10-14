@@ -1,13 +1,12 @@
-from multiprocessing.sharedctypes import Value
-from Hydrogram import Hydrogram
-from Tab import Tab
 from PyQt5.QtWidgets import (
-   QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QDialog, QTableView, QListWidgetItem, QHeaderView 
+   QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QTableView, QListWidgetItem, QHeaderView, QMessageBox, QMenu, QAction,
+   QAbstractItemView
 )
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 
-from HydrogramTableModel import HydrogramTableModel
+from Tab import Tab
+from TableModel import TableModel
 from MplCanvas import MplCanvas, NavigationToolbar
 from DialogNewHydrogram import DialogNewHydrogram
 from DialogDelete import DialogDelete
@@ -15,7 +14,7 @@ from DialogDelete import DialogDelete
 class HydrogramTab(Tab):
     
     def __init__(self, tabBar):
-        super().__init__(tabBar, "Hydrogramme", ".\\src\\main\\icons\\base\\42699-water-wave-icon.png")
+        super().__init__(tabBar, "Hydrogramme", tabBar.getResource("images\\42699-water-wave-icon.png"))
         self.layoutList = QVBoxLayout()
         self.layoutList.addWidget(QLabel("Liste des hydrogrammes : "))
         self.hydrogramList = QListWidget()
@@ -23,26 +22,27 @@ class HydrogramTab(Tab):
         self.hydrogramList.currentTextChanged.connect(self.hydrogramChoiceChanged)
         self.layoutList.addWidget(self.hydrogramList)
        
-
-        binWidget = QPushButton(" DELETE")
-        binWidget.setIcon(QIcon(".\\src\\main\\icons\\base\\trash.png"))
-        binWidget.released.connect(self.deleteButtonReleased)
-        copyWidget = QPushButton(" COPY")
-        copyWidget.setIcon(QIcon(".\\src\\main\\icons\\base\\copy.png"))
-        copyWidget.released.connect(self.copyButtonReleased)
-        editWidget = QPushButton(" EDIT")
-        editWidget.setIcon(QIcon(".\\src\\main\\icons\\base\\edit.png"))
-        newHydrogramButton = QPushButton(" NEW")
-        newHydrogramButton.setIcon(QIcon(".\\src\\main\\icons\\base\\add.png"))
-        newHydrogramButton.released.connect(self.newHydrogramButtonReleased)
-        self.layoutList.addWidget(newHydrogramButton)
-        self.layoutActions = QHBoxLayout()
-        self.layoutActions.addWidget(editWidget)
-        self.layoutActions.addWidget(copyWidget)
-        self.layoutActions.addWidget(binWidget)
-        self.layoutList.addLayout(self.layoutActions)
+        self.binWidget = QPushButton(" DELETE")
+        self.binWidget.setIcon(QIcon(self.getResource("images\\trash.png")))
+        self.binWidget.released.connect(self.deleteButtonReleased)
+        self.copyWidget = QPushButton(" COPY")
+        self.copyWidget.setIcon(QIcon(self.getResource("images\\copy.png")))
+        self.copyWidget.released.connect(self.copyButtonReleased)
+        self.editWidget = QPushButton(" EDIT")
+        self.editWidget.setIcon(QIcon(self.getResource("images\\edit.png")))
+        self.editWidget.released.connect(self.editButtonReleased)
+        self.editing = False
+        self.newHydrogramButton = QPushButton(" NEW")
+        self.newHydrogramButton.setIcon(QIcon(self.getResource("images\\add.png")))
+        self.newHydrogramButton.released.connect(self.newHydrogramButtonReleased)
+        self.layoutList.addWidget(self.newHydrogramButton)
+        self.layoutList.addWidget(self.editWidget)
+        self.layoutList.addWidget(self.copyWidget)
+        self.layoutList.addWidget(self.binWidget)
 
         self.hydrogramData = QTableView()
+        self.hydrogramData.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.hydrogramData.customContextMenuRequested.connect(self.contextMenuOnTable)
         header = self.hydrogramData.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.hydrogramData.setHorizontalHeader(header)
         self.layoutData = QVBoxLayout()
@@ -52,11 +52,9 @@ class HydrogramTab(Tab):
         self.layoutPlot = QVBoxLayout()
         self.sc = MplCanvas()
         self.layoutPlot.addWidget(self.sc)
-        df = self.model.data
-        self.plot, = self.sc.axes.plot(df[df.columns[0]], df[df.columns[1]])
         self.toolbar = NavigationToolbar(self.sc, self)
         self.layoutPlot.addWidget(self.toolbar)
-        self.plotHydrogramData()
+        self.plotData()
 
         layoutInter = QHBoxLayout()
         layoutInter.addLayout(self.layoutList)
@@ -64,15 +62,55 @@ class HydrogramTab(Tab):
         self.layout.addLayout(layoutInter)
         self.layout.addLayout(self.layoutPlot)
     
+    def contextMenuOnTable(self, pos):
+        context = QMenu(self)
+        if self.editing:
+            addUpperLine = QAction("Insérer une ligne au-dessus", self.hydrogramData)
+            addLowerLine = QAction("Insérer une ligne en-dessous", self.hydrogramData)
+            deleteLine = QAction("Supprimer cette ligne", self.hydrogramData)
+            addUpperLine.triggered.connect(self.model.addUpperLineForConnection(self.hydrogramData.indexAt(pos)))
+            addLowerLine.triggered.connect(self.model.addLowerLineForConnection(self.hydrogramData.indexAt(pos)))
+            deleteLine.triggered.connect(self.model.deleteLineForConnection(self.hydrogramData.indexAt(pos)))
+            context.addAction(addUpperLine)
+            context.addAction(addLowerLine)
+            context.addAction(deleteLine)
+            context.exec(self.hydrogramData.mapToGlobal(pos))
+
     def newHydrogramButtonReleased(self):
         dlg = DialogNewHydrogram(parent=self)
         if dlg.exec():
-            newHydogram = Hydrogram(dlg.hydroArgs)
+            newHydogram = dlg.hydrogram
             self.getProject().addHydrogram(newHydogram)
             self.getProject().setHydrogramSelected(newHydogram.name)
             item = QListWidgetItem(newHydogram.name)
             self.hydrogramList.addItem(item)
             self.hydrogramList.setCurrentItem(item)
+        return
+
+    def editButtonReleased(self):
+        h = self.getProject().hydrogramSelected
+        if h == None:
+            return True
+        if self.editing:
+            if QMessageBox.question(self, "Fin d'édition", "Voulez-vous enregistrer les modifications ?") == QMessageBox.No:
+                self.model.restore()
+            self.editWidget.setIcon(QIcon(self.getResource("images\\edit.png")))
+            self.editWidget.setText(" EDIT")
+            self.hydrogramList.setSelectionMode(QAbstractItemView.SingleSelection)
+            self.newHydrogramButton.setEnabled(True)
+            self.copyWidget.setEnabled(True)
+            self.binWidget.setEnabled(True)
+            self.enableOtherTabs()
+        else:
+            self.editWidget.setIcon(QIcon(self.getResource("images\\edit.png")))
+            self.editWidget.setText(" STOP EDITING")
+            self.hydrogramList.setSelectionMode(QAbstractItemView.NoSelection)
+            self.newHydrogramButton.setEnabled(False)
+            self.copyWidget.setEnabled(False)
+            self.binWidget.setEnabled(False)
+            self.disableOtherTabs()
+        self.editing = not(self.editing)
+        self.model.changeEditionMode()
         return
 
     def deleteButtonReleased(self):
@@ -89,15 +127,15 @@ class HydrogramTab(Tab):
         h = self.getProject().hydrogramSelected
         if h == None:
             return
-        new_name = h.name + " (1)"
+        newName = h.name + " (1)"
         i = 1
-        while new_name in self.getProject().getHydrogramNameList():
+        while newName in self.getProject().getHydrogramNameList():
             i += 1
-            new_name = h.name + f" ({i})"
-        h_copy = h.copy(new_name)
-        self.getProject().addHydrogram(h_copy)
-        self.getProject().setHydrogramSelected(h_copy.name)
-        item = QListWidgetItem(h_copy.name)
+            newName = h.name + f" ({i})"
+        hCopy = h.copy(newName)
+        self.getProject().addHydrogram(hCopy)
+        self.getProject().setHydrogramSelected(hCopy.name)
+        item = QListWidgetItem(hCopy.name)
         self.hydrogramList.addItem(item)
         self.hydrogramList.setCurrentItem(item)
         return
@@ -105,20 +143,30 @@ class HydrogramTab(Tab):
     def hydrogramChoiceChanged(self, name):
         self.getProject().setHydrogramSelected(name)
         self.displayHydrogramData()
-        self.plotHydrogramData()
+        self.plotData()
         return
 
     def displayHydrogramData(self):
-        self.model = HydrogramTableModel(self.getProject().hydrogramSelected)
-        self.hydrogramData.setModel(self.model)
-        return
+        if self.getProject().hydrogramSelected == None:
+            self.model = None
+            self.hydrogramData.setModel(None)
+        else:
+            self.model = TableModel(self, self.getProject().hydrogramSelected)
+            self.hydrogramData.setModel(self.model)
 
-    def plotHydrogramData(self):
-        df = self.model.data
-        self.plot.set_xdata(df[df.columns[0]])
-        self.plot.set_ydata(df[df.columns[1]])
-        self.sc.axes.set_xlabel(df.columns[0])
-        self.sc.axes.set_ylabel(df.columns[1])
+    def plotData(self):
+        if self.getProject().hydrogramSelected == None:
+            return
+        else:
+            df = self.getProject().hydrogramSelected.data
+        self.sc.axes.lines.clear()
+        self.sc.axes.set_prop_cycle(None)
+        if self.getProject().hydrogramSelected == None:
+            return
+        subdf = df[~(df[df.columns[0]].isnull()) & ~(df[df.columns[1]].isnull())]
+        self.sc.axes.plot(subdf[subdf.columns[0]], subdf[subdf.columns[1]])
+        self.sc.axes.set_xlabel(subdf.columns[0])
+        self.sc.axes.set_ylabel(subdf.columns[1])
         self.sc.axes.relim()
         self.sc.axes.autoscale()
         self.sc.draw()
