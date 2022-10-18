@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import (
-    QMainWindow, QMessageBox
+    QMainWindow
 )
 from PyQt5.QtGui import QIcon
 
-from TabBar import TabBar
+from front.TabBar import TabBar
 
 class MainWindow(QMainWindow):
 

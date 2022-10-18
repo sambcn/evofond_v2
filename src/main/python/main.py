@@ -1,7 +1,7 @@
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 from fbs_runtime.platform import is_windows
 
-from MainWindow import MainWindow
+from front.MainWindow import MainWindow
 
 # import sys
 
