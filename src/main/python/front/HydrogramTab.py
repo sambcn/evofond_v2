@@ -5,11 +5,11 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 
-from Tab import Tab
-from TableModel import TableModel
-from MplCanvas import MplCanvas, NavigationToolbar
-from DialogNewHydrogram import DialogNewHydrogram
-from DialogDelete import DialogDelete
+from front.Tab import Tab
+from front.TableModel import TableModel
+from front.MplCanvas import MplCanvas, NavigationToolbar
+from front.DialogNewHydrogram import DialogNewHydrogram
+from front.DialogDelete import DialogDelete
 
 class HydrogramTab(Tab):
     
@@ -161,8 +161,6 @@ class HydrogramTab(Tab):
             df = self.getProject().hydrogramSelected.data
         self.sc.axes.lines.clear()
         self.sc.axes.set_prop_cycle(None)
-        if self.getProject().hydrogramSelected == None:
-            return
         subdf = df[~(df[df.columns[0]].isnull()) & ~(df[df.columns[1]].isnull())]
         self.sc.axes.plot(subdf[subdf.columns[0]], subdf[subdf.columns[1]])
         self.sc.axes.set_xlabel(subdf.columns[0])

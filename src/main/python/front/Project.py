@@ -1,9 +1,5 @@
 from PyQt5.QtCore import QDateTime
 
-from Hydrogram import Hydrogram
-from Profile import Profile
-
-import pandas as pd
 import pickle as pkl
 
 class Project():
@@ -15,19 +11,57 @@ class Project():
         self.needToBeSaved = False
         self.author = ""
         self.description = ""
+        self.path = None
+
         self.hydrogramList = []
         self.hydrogramSelected = None
         self.hydrogramSelectedIndex = None
-        self.path = None
+
+        self.granulometryList = []
+        self.granulometrySelected = None
+        self.granulometrySelectedIndex = None
+
+        self.sedimentogramList = []
+        self.sedimentogramSelected = None
+        self.sedimentogramSelectedIndex = None
+
         self.profileList = []
         self.profileSelected = None
-        self.profileSelectedIndex = 0
+        self.profileSelectedIndex = None
+
+    def getHydrogram(self, name):
+        for h in self.hydrogramList:
+            if h.name == name:
+                return h
+        return None 
+
+    def getGranulometry(self, name):
+        for g in self.granulometryList:
+            if g.name == name:
+                return g
+        return None 
 
     def getHydrogramNameList(self):
         return [h.name for h in self.hydrogramList]
 
+    def getGranulometryNameList(self):
+        return [g.name for g in self.granulometryList]
+
+    def getSedimentogramNameList(self):
+        return [s.name for s in self.sedimentogramList]
+
     def addHydrogram(self, hydrogram):
         self.hydrogramList.append(hydrogram)
+        self.updateModifDate()
+        self.needToBeSaved = True
+
+    def addGranulometry(self, granulometry):
+        self.granulometryList.append(granulometry)
+        self.updateModifDate()
+        self.needToBeSaved = True
+
+    def addSedimentogram(self, sedimentogram):
+        self.sedimentogramList.append(sedimentogram)
         self.updateModifDate()
         self.needToBeSaved = True
 
@@ -42,7 +76,22 @@ class Project():
                 self.updateModifDate()
                 self.hydrogramSelected = h
                 self.hydrogramSelectedIndex = i
-                self.needToBeSaved = True
+                return
+
+    def setGranulometrySelected(self, name):
+        for i, g in enumerate(self.granulometryList):
+            if g.name == name:
+                self.updateModifDate()
+                self.granulometrySelected = g
+                self.granulometrySelectedIndex = i
+                return
+
+    def setSedimentogramSelected(self, name):
+        for i, s in enumerate(self.sedimentogramList):
+            if s.name == name:
+                self.updateModifDate()
+                self.sedimentogramSelected = s
+                self.sedimentogramSelectedIndex = i
                 return
 
     def setProfileSelected(self, name):
@@ -51,7 +100,6 @@ class Project():
                 self.updateModifDate()
                 self.profileSelected = p
                 self.profileSelectedIndex = i
-                self.needToBeSaved = True
                 return
 
     def deleteHydrogram(self, h):
@@ -65,6 +113,36 @@ class Project():
                 else:
                     self.hydrogramSelectedIndex = max(0, self.hydrogramSelectedIndex - 1)
                     self.hydrogramSelected = self.hydrogramList[self.hydrogramSelectedIndex]
+                self.needToBeSaved = True
+                return
+        return
+
+    def deleteGranulometry(self, g):
+        for i, g2 in enumerate(self.granulometryList):
+            if g2 == g:
+                self.granulometryList.pop(i)
+                self.updateModifDate()
+                if len(self.granulometryList) == 0:
+                    self.granulometrySelected = None
+                    self.granulometrySelectedIndex = None
+                else:
+                    self.granulometrySelectedIndex = max(0, self.granulometrySelectedIndex - 1)
+                    self.granulometrySelected = self.granulometryList[self.granulometrySelectedIndex]
+                self.needToBeSaved = True
+                return
+        return
+
+    def deleteSedimentogram(self, s):
+        for i, s2 in enumerate(self.sedimentogramList):
+            if s2 == s:
+                self.sedimentogramList.pop(i)
+                self.updateModifDate()
+                if len(self.sedimentogramList) == 0:
+                    self.sedimentogramSelected = None
+                    self.sedimentogramSelectedIndex = None
+                else:
+                    self.sedimentogramSelectedIndex = max(0, self.sedimentogramSelectedIndex - 1)
+                    self.sedimentogramSelected = self.sedimentogramList[self.sedimentogramSelectedIndex]
                 self.needToBeSaved = True
                 return
         return

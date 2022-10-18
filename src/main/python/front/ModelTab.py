@@ -1,4 +1,4 @@
-from Tab import Tab
+from front.Tab import Tab
 
 class ModelTab(Tab):
     

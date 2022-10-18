@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout,
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt
 
-from Hydrogram import Hydrogram
+from front.Hydrogram import Hydrogram
 
 class DialogNewHydrogram(QDialog):
 
@@ -63,33 +63,33 @@ class DialogNewHydrogram(QDialog):
         lavabreLayout1.addWidget(QLabel("alpha = "), 4, 0)
 
         self.doubleBoxDuration = QDoubleSpinBox()
-        self.doubleBoxDuration.valueChanged.connect(self.lavabreDurationChange)
+        self.doubleBoxDuration.valueChanged.connect(self.lavabreDurationChanged)
         self.doubleBoxDuration.setSuffix("   s")
         self.doubleBoxDuration.setMinimum(0)
         self.doubleBoxDuration.setMaximum(999999.99)
         lavabreLayout1.addWidget(self.doubleBoxDuration, 0, 1)
         self.hydroArgs['d'] = self.doubleBoxDuration.value()
         self.doubleBoxQmax = QDoubleSpinBox()
-        self.doubleBoxQmax.valueChanged.connect(self.lavabreQmaxChange)
+        self.doubleBoxQmax.valueChanged.connect(self.lavabreQmaxChanged)
         self.doubleBoxQmax.setSuffix("   m3/s")
         self.doubleBoxQmax.setMinimum(0)
         lavabreLayout1.addWidget(self.doubleBoxQmax, 1, 1)
         self.hydroArgs['Qmax'] = self.doubleBoxQmax.value()
         self.doubleBoxQmin = QDoubleSpinBox()
-        self.doubleBoxQmin.valueChanged.connect(self.lavabreQminChange)
+        self.doubleBoxQmin.valueChanged.connect(self.lavabreQminChanged)
         self.doubleBoxQmin.setSuffix("   m3/s")
         self.doubleBoxQmin.setMinimum(0)
         lavabreLayout1.addWidget(self.doubleBoxQmin, 2, 1)
         self.hydroArgs['Qmin'] = self.doubleBoxQmin.value()
         self.doubleBoxTmax = QDoubleSpinBox()
-        self.doubleBoxTmax.valueChanged.connect(self.lavabreTmaxChange)
+        self.doubleBoxTmax.valueChanged.connect(self.lavabreTmaxChanged)
         self.doubleBoxTmax.setSuffix("   s")
         self.doubleBoxTmax.setMinimum(0)
         self.doubleBoxDuration.setMaximum(999999.99)
         lavabreLayout1.addWidget(self.doubleBoxTmax, 3, 1)
         self.hydroArgs['tmax'] = self.doubleBoxTmax.value()
         self.doubleBoxAlpha = QDoubleSpinBox()
-        self.doubleBoxAlpha.valueChanged.connect(self.lavabreAlphaChange)
+        self.doubleBoxAlpha.valueChanged.connect(self.lavabreAlphaChanged)
         self.doubleBoxAlpha.setSuffix("    ")
         self.doubleBoxAlpha.setMinimum(0)
         lavabreLayout1.addWidget(self.doubleBoxAlpha, 4, 1)
@@ -140,22 +140,22 @@ class DialogNewHydrogram(QDialog):
     def textChanged(self, s):
         self.hydroArgs["type"] = s
 
-    def lavabreDurationChange(self, v):
+    def lavabreDurationChanged(self, v):
         self.hydroArgs["d"] = v
         self.doubleBoxTmax.setMaximum(v)
 
-    def lavabreQminChange(self, v):
+    def lavabreQminChanged(self, v):
         self.hydroArgs["Qmin"] = v
         self.doubleBoxQmax.setMinimum(v)
 
-    def lavabreQmaxChange(self, v):
+    def lavabreQmaxChanged(self, v):
         self.hydroArgs["Qmax"] = v
         self.doubleBoxQmin.setMaximum(v)
 
-    def lavabreTmaxChange(self, v):
+    def lavabreTmaxChanged(self, v):
         self.hydroArgs["tmax"] = v
 
-    def lavabreAlphaChange(self, v):
+    def lavabreAlphaChanged(self, v):
         self.hydroArgs["alpha"] = v
 
     def check(self):

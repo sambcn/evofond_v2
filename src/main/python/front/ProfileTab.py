@@ -1,4 +1,3 @@
-import string
 from urllib.parse import quote_plus
 from PyQt5.QtWidgets import (
     QVBoxLayout, QMessageBox, QTableView, QHeaderView, QGridLayout, QWidget, QMenu, QAction,
@@ -8,12 +7,12 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import Qt
 
-from Tab import Tab
-from Profile import Profile
-from DialogNewProfile import DialogNewProfile
-from DialogDelete import DialogDelete
-from TableModel import TableModel
-from MplCanvas import MplCanvas, NavigationToolbar
+from front.Tab import Tab
+from front.Profile import Profile
+from front.DialogNewProfile import DialogNewProfile
+from front.DialogDelete import DialogDelete
+from front.TableModel import TableModel
+from front.MplCanvas import MplCanvas, NavigationToolbar
 
 import pandas as pd
 

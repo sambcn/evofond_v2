@@ -1,12 +1,12 @@
-from Tab import Tab
-from Project import Project
 from PyQt5.QtWidgets import (
    QPushButton, QHBoxLayout, QLabel, QFileDialog, QMessageBox, QVBoxLayout
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QIcon, QPixmap
 
-from DialogEditProject import DialogEditProject
+from front.DialogEditProject import DialogEditProject
+from front.Tab import Tab
+from front.Project import Project
 
 import pickle as pkl
 
@@ -33,6 +33,11 @@ class ProjectTab(Tab):
         self.editTextButton = QPushButton(" Modifier")
         self.editTextButton.setIcon(QIcon(self.getResource("images\\edit.png")))
         self.editTextButton.released.connect(self.editTextButtonRealeased)
+        self.imageONFRTM = QLabel()
+        pixmap = QPixmap(self.getResource('images\\onfrtm.png'))
+        pixmap = pixmap.scaled(QSize(300,300), Qt.KeepAspectRatio)
+        self.imageONFRTM.setPixmap(pixmap)
+        
         self.vLayout = QVBoxLayout()
         self.layout1 = QHBoxLayout()
         self.layout2 = QHBoxLayout()        
@@ -42,6 +47,7 @@ class ProjectTab(Tab):
         self.layout1.addWidget(self.saveAsProjectButton)
         self.layout2.addWidget(self.text, alignment=Qt.AlignRight)
         self.layout2.addWidget(self.editTextButton, alignment=(Qt.AlignLeft))
+        self.layout2.addWidget(self.imageONFRTM, alignment=(Qt.AlignBottom | Qt.AlignRight))
         self.vLayout.addLayout(self.layout1)
         self.vLayout.addLayout(self.layout2)
         self.layout.addLayout(self.vLayout)

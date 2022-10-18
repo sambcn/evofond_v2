@@ -1,12 +1,13 @@
 from PyQt5.QtWidgets import QWidget, QTabWidget
 from PyQt5.QtGui import QFont
 
-from ProjectTab import ProjectTab 
-from HydrogramTab import HydrogramTab 
-from SedimentogramTab import SedimentogramTab 
-from ProfileTab import ProfileTab 
-from ModelTab import ModelTab 
-from ResultsTab import ResultsTab 
+from front.ProjectTab import ProjectTab 
+from front.HydrogramTab import HydrogramTab 
+from front.GranulometryTab import GranulometryTab 
+from front.SedimentogramTab import SedimentogramTab 
+from front.ProfileTab import ProfileTab 
+from front.ModelTab import ModelTab 
+from front.ResultsTab import ResultsTab 
 
 class TabBar(QTabWidget):
 
@@ -15,6 +16,7 @@ class TabBar(QTabWidget):
         
         self.projectTab = ProjectTab(self)
         self.hydrogramtTab = HydrogramTab(self)
+        self.granulometryTab = GranulometryTab(self)
         self.sedimentogramTab = SedimentogramTab(self)
         self.profileTab = ProfileTab(self)
         self.modelTab = ModelTab(self)
@@ -22,10 +24,11 @@ class TabBar(QTabWidget):
 
         self.insertTab(0, self.projectTab, self.projectTab.icon, self.projectTab.label)
         self.insertTab(1, self.hydrogramtTab, self.hydrogramtTab.icon, self.hydrogramtTab.label)
-        self.insertTab(2, self.sedimentogramTab, self.sedimentogramTab.icon, self.sedimentogramTab.label)
-        self.insertTab(3, self.profileTab, self.profileTab.icon, self.profileTab.label)
-        self.insertTab(4, self.modelTab, self.modelTab.icon, self.modelTab.label)
-        self.insertTab(5, self.resultsTab, self.resultsTab.icon, self.resultsTab.label)
+        self.insertTab(2, self.granulometryTab, self.granulometryTab.icon, self.granulometryTab.label)
+        self.insertTab(3, self.sedimentogramTab, self.sedimentogramTab.icon, self.sedimentogramTab.label)
+        self.insertTab(4, self.profileTab, self.profileTab.icon, self.profileTab.label)
+        self.insertTab(5, self.modelTab, self.modelTab.icon, self.modelTab.label)
+        self.insertTab(6, self.resultsTab, self.resultsTab.icon, self.resultsTab.label)
 
         self.tabBarClicked.connect(self.clicked)
 
