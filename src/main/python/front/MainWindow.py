@@ -29,3 +29,6 @@ class MainWindow(QMainWindow):
             event.ignore()
         else:
             event.accept() # let the window close
+
+    def processEvents(self):
+        self.appctxt.app.processEvents()

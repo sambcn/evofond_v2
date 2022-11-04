@@ -4,8 +4,8 @@ import numpy as np
 from copy import copy
 from scipy.misc import derivative
 from scipy.optimize import brentq, newton
-from src.perf import Performance
-from src.utils import G, Y_MIN, get_centroid
+from back.perf import Performance
+from back.utils import G, Y_MIN, get_centroid
 
 class IrregularSection:
 

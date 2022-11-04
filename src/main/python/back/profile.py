@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from mpl_toolkits.mplot3d import Axes3D
 from time import time
-from src.irregularSection import IrregularSection
-from src.perf import Performance
-from src.utils import Y_MIN, G, get_matrix_max, read_hecras_data, reverse_data, time_to_string
+from back.irregularSection import IrregularSection
+from back.perf import Performance
+from back.utils import Y_MIN, G, get_matrix_max, read_hecras_data, reverse_data, time_to_string
 
 class Profile():
 
@@ -52,7 +52,8 @@ class Profile():
             if xi in x_0:
                 index = x_0.index(xi)
                 new_list_of_section.append(self.get_section(index))
-                new_exit_loss_coef_list.append(self.get_exit_loss_coef(index))
+                if index != len(x_0)-1:
+                    new_exit_loss_coef_list.append(self.get_exit_loss_coef(index))
             else:
                 while xi > x_down:
                     segment_index += 1
@@ -135,7 +136,7 @@ class Profile():
         down_direction = True
         nb_loop = 0
 
-        # y_list_memory = y_list[:]
+        y_list_memory = y_list[:]
         while i_current > 0 or (down_direction and i_current == 0):
             # print(f"start at x = {self.get_section(i_current).get_x()} toward {'down' if down_direction else 'up'} direction")
             
@@ -255,10 +256,12 @@ class Profile():
 
         return QsIn
 
-    def compute_event(self, hydrogram, t_hydrogram, law, sedimentogram=None, backup=False, debug=False, method="ImprovedEuler", friction_law="Ferguson", cfl=1, critical=False, upstream_condition="normal_depth", downstream_condition="normal_depth", plot=False, animate=False, injection=None):
+    def compute_event(self, hydrogram, t_hydrogram, law, sedimentogram=None, backup=False, debug=False, method="ImprovedEuler", friction_law="Ferguson", cfl=1, critical=False, upstream_condition="normal_depth", downstream_condition="normal_depth", plot=False, animate=False, injection=None, frontBuffer=None):
         """
         main function of the class : compute an entire event and return the evolution of the profile
         """
+        # Performance.start()
+   
         start_computation = time()
         t = t_hydrogram[0]
         y_matrix = [] # list of the water depth during the event
@@ -267,27 +270,48 @@ class Profile():
         V_in = 0 # solid volume gone into the profile during the event
         V_out = 0 # solid volume gone out of the profile
         Q_history = [] # list of water discharge at each step of the computation
+        Qs_history = []
+        yc_history = []
+        yn_history = []
+        b_history = []
         t_history = [t] # list of the t time of each step of the commputation
         dt_history = [] # list of the time steps used at each iteration
-        
-        stored_volume_start = self.get_stored_volume() # stored volume of sediment at the start of the event 
+        n = self.get_nb_section()
+
+        # stored_volume_start = self.get_stored_volume() # stored volume of sediment at the start of the event 
         initial_profile = self.copy()
         method_set = {"Euler", "ImprovedEuler", "RungeKutta"}
         if not(method in method_set):
-            print(f"WARNING : chosen method not in the available list : {method_set}, it has been set by default on ImprovedEuler")
+            # string = f"WARNING : chosen method not in the available list : {method_set}, it has been set by default on ImprovedEuler"
+            # if frontBuffer == None:
+            #     print(string)
+            # else:
+            #     frontBuffer.print(string)
             method = "ImprovedEuler"
-        log_string = f"[backup={backup}, debug={debug}, method={method}, friction_law={friction_law}, speed_coef={cfl}, critical={critical}]"
-        if debug:
-            profile_list = [initial_profile]
-            current_stored_volume = stored_volume_start
-            total_volume_difference = [] 
-            one_step_volume_difference = []
+        # log_string = f"[backup={backup}, debug={debug}, method={method}, friction_law={friction_law}, speed_coef={cfl}, critical={critical}]"
+        # if debug:
+        #     profile_list = [initial_profile]
+        #     current_stored_volume = stored_volume_start
+        #     total_volume_difference = [] 
+        #     one_step_volume_difference = []
 
-        next_t_print = 0
+        # next_t_print = 0
         while t <= t_hydrogram[-1]:
+            
+            ###
+            frontBuffer.updateProgressBar((t/t_hydrogram[-1])*100)
+            frontBuffer.updateModelSimulationLabel(time()-start_computation)
+            frontBuffer.processEvents()
+            if frontBuffer.stopSimulation:
+                return
+            ###
+            
             Q = np.interp(t, t_hydrogram, hydrogram)
             Q_history.append(Q)
-            Q_list = [Q for _ in range(self.get_nb_section())]
+            Q_list = [Q for _ in range(n)]
+            yc_history.append(self.get_yc_list(Q_list))
+            # yn_history.append(self.get_yn_list(Q_list, friction_law=friction_law if friction_law != None else "Ferguson"))
+            b_history.append([s.get_b() for s in self.get_section_list()])
 
             # hydraulic computations
             if critical:
@@ -302,16 +326,23 @@ class Profile():
             # dt_hydrogram = t_aux[1] + t_aux[0]
             # print(f"dt_opti={dt_opti:.3f}, dt_hydrogram={dt_hydrogram:.3f}")
             # dt = min(dt_hydrogram, dt_opti)
-            if t >= next_t_print: 
-                print(f"{t:.3f}/{t_hydrogram[-1]} (dt={dt:.3f}s) "+log_string)
-                print(f"current_computation_time = {time_to_string(time()-start_computation)}")
-                next_t_print += (t_hydrogram[-1]/10)
+            # if t >= next_t_print:
+            #     string1 = f"{t:.3f}/{t_hydrogram[-1]} (dt={dt:.3f}s) "+log_string
+            #     string2 = f"current_computation_time = {time_to_string(time()-start_computation)}"
+            #     if frontBuffer == None:
+            #         print(string1)
+            #         print(string2)
+            #     else:
+            #         frontBuffer.print(string1) 
+            #         frontBuffer.print(string2) 
+            #     next_t_print += (t_hydrogram[-1]/10)
            
             # solid transport
             if list(sedimentogram) == None:
                 QsIn0 = law.compute_Qs(initial_profile.get_upstream_section(), Q, y_list[0], y_list[1]) # Gonna change, it is a given parameter, chosen by users
             else:
                 QsIn0 = np.interp(t, t_hydrogram, sedimentogram)
+            Qs_history.append(QsIn0)
             V_in += QsIn0*dt
             QsOut = self.update_bottom(Q, y_list, QsIn0, dt, law, friction_law=friction_law)
             V_out += QsOut*dt
@@ -321,137 +352,160 @@ class Profile():
             dt_history.append(dt)
             t_history.append(t)
             # debug
-            if debug:
-                total_volume_difference.append(V_in - V_out - (self.get_stored_volume() - stored_volume_start))
-                one_step_volume_difference.append(QsIn0*dt - QsOut*dt - (self.get_stored_volume() - current_stored_volume))
-                current_stored_volume = self.get_stored_volume()
-                profile_list.append(self.copy())
+            # if debug:
+            #     total_volume_difference.append(V_in - V_out - (self.get_stored_volume() - stored_volume_start))
+            #     one_step_volume_difference.append(QsIn0*dt - QsOut*dt - (self.get_stored_volume() - current_stored_volume))
+            #     current_stored_volume = self.get_stored_volume()
+            #     profile_list.append(self.copy())
 
+        frontBuffer.updateProgressBar(100)
+        frontBuffer.updateModelSimulationLabel(time()-start_computation)
         try:       
             Q = np.interp(t, t_hydrogram, hydrogram)
+            Q_list = [Q for _ in range(n)]
             Q_history.append(Q)
-            y_matrix.append(self.get_yc_list(Q) if critical else self.compute_depth(hydrogram[-1]))
+            y_matrix.append(self.get_yc_list(Q_list) if critical else self.compute_depth(Q_list, method=method, friction_law=friction_law, upstream_condition=upstream_condition, downstream_condition=downstream_condition))
             h_matrix.append([s.get_H(Q, y_matrix[-1][i]) for i, s in enumerate(self.get_section_list())])
+            yc_history.append(self.get_yc_list(Q_list))
+            yn_history.append(self.get_yn_list(Q_list, friction_law=friction_law if friction_law != None else "Ferguson"))
+            b_history.append([s.get_b() for s in self.get_section_list()])
         except Exception:
             pass
         stored_volume_end = self.get_stored_volume()
         end_computation = time()
-        print(f"computation time = {end_computation-start_computation}s")
+        frontBuffer.updateProgressBar(100)
+        frontBuffer.updateModelSimulationLabel(end_computation-start_computation)
+        # string = f"computation time = {end_computation-start_computation}s"
+        # if frontBuffer == None:
+        #     print(string)
+        # else:
+        #     frontBuffer.print(string)
+      
         x = self.get_x_list()
         x_max = max(x)
         x = [x_max-xi for xi in x]
-        if plot:
-            title = 'Sediment transport :\n' + \
-                f'Volume gone in :  {V_in}\n' + \
-                f'Volume gone out : {V_out}\n' + \
-                f'Stored volume : {stored_volume_end - stored_volume_start}\n' + \
-                f'Sum : {V_in - V_out - (stored_volume_end - stored_volume_start)}'
-            fig0, axs = plt.subplots(2)
-            fig0.suptitle(title)
-            axs[0].plot(x, z_matrix[0], color="r", label="z start")
-            axs[0].plot(x, z_matrix[-1], "orange", label="z end")
-            axs[0].plot(x, self.get_z_min_list(), "g--", marker="x", label="zmin")
-            axs[0].set(xlabel="x", ylabel="height (m)")
-            # axs[0].plot(x, [s.get_H(Q, y_matrix[-1][i]) for i, s in enumerate(self.__section_list)], label="Energy grade line")
-            axs[1].plot(x, np.array(z_matrix[-1])-np.array(z_matrix[0]), "b", label="newz-z")
-            axs[1].annotate(f"event of {time_to_string(t)}\ndt $\in$ [{min(dt_history):.3f}s, {max(dt_history):.3f}s]\nQmax = {max(hydrogram):.3f}m3/s\nQmean = {np.mean(hydrogram):.3f}m3/s\nfriction law = {'critical' if critical else friction_law}\nsediment transport law = {str(law)}\ntime of computation = {time_to_string(end_computation-start_computation)}", (self.get_x_min(), axs[1].get_ylim()[0]))
-            axs[1].set(xlabel="x", ylabel="difference of height (m)")
-            self.__plot_width_background(axs[0])
-            self.__plot_width_background(axs[1])
-            fig0.legend(loc='lower right')
-            fig0.set_size_inches(10.5, 9.5)
-            if backup:
-                print("saving result plot...")
-                fig0.savefig("./result.png", dpi=400, format="png")
-                print("plot saved.")
+        # if plot:
+        #     title = 'Sediment transport :\n' + \
+        #         f'Volume gone in :  {V_in}\n' + \
+        #         f'Volume gone out : {V_out}\n' + \
+        #         f'Stored volume : {stored_volume_end - stored_volume_start}\n' + \
+        #         f'Sum : {V_in - V_out - (stored_volume_end - stored_volume_start)}'
+        #     fig0, axs = plt.subplots(2)
+        #     fig0.suptitle(title)
+        #     axs[0].plot(x, z_matrix[0], color="r", label="z start")
+        #     axs[0].plot(x, z_matrix[-1], "orange", label="z end")
+        #     axs[0].plot(x, self.get_z_min_list(), "g--", marker="x", label="zmin")
+        #     axs[0].set(xlabel="x", ylabel="height (m)")
+        #     # axs[0].plot(x, [s.get_H(Q, y_matrix[-1][i]) for i, s in enumerate(self.__section_list)], label="Energy grade line")
+        #     axs[1].plot(x, np.array(z_matrix[-1])-np.array(z_matrix[0]), "b", label="newz-z")
+        #     axs[1].annotate(f"event of {time_to_string(t)}\ndt $\in$ [{min(dt_history):.3f}s, {max(dt_history):.3f}s]\nQmax = {max(hydrogram):.3f}m3/s\nQmean = {np.mean(hydrogram):.3f}m3/s\nfriction law = {'critical' if critical else friction_law}\nsediment transport law = {str(law)}\ntime of computation = {time_to_string(end_computation-start_computation)}", (self.get_x_min(), axs[1].get_ylim()[0]))
+        #     axs[1].set(xlabel="x", ylabel="difference of height (m)")
+        #     self.__plot_width_background(axs[0])
+        #     self.__plot_width_background(axs[1])
+        #     fig0.legend(loc='lower right')
+        #     fig0.set_size_inches(10.5, 9.5)
+        #     if backup:
+        #         print("saving result plot...")
+        #         fig0.savefig("./result.png", dpi=400, format="png")
+        #         print("plot saved.")
 
-            if debug:
-                plt.figure()
-                plt.plot([i*dt for i in range(len(total_volume_difference))], total_volume_difference, label="acumulated solid creation or disappearance")
-                plt.plot([i*dt for i in range(len(one_step_volume_difference))], one_step_volume_difference, label="solid creation or disappearance during this step of time")
-                plt.legend()
-                plt.title('sediment creation or diseppearance due to numerical errors')
+        #     if debug:
+        #         plt.figure()
+        #         plt.plot([i*dt for i in range(len(total_volume_difference))], total_volume_difference, label="acumulated solid creation or disappearance")
+        #         plt.plot([i*dt for i in range(len(one_step_volume_difference))], one_step_volume_difference, label="solid creation or disappearance during this step of time")
+        #         plt.legend()
+        #         plt.title('sediment creation or diseppearance due to numerical errors')
 
-        if animate:
-            fig, ax1 = plt.subplots() 
-            line, = ax1.plot(x, np.array(y_matrix[0])+np.array(z_matrix[0]), label="water line")
-            ax1.set_ylabel("height (m)")
-            annotation = ax1.annotate(f"Q={hydrogram[0]}", ((self.get_x_max()-self.get_x_min())*0.7+self.get_x_min(), min(self.get_z_min_list())))
-            ax1.plot(x, z_matrix[0], "r", label="z at the begining")
-            # ax1.vlines(200, 180, 210)
-            line2, = ax1.plot(x, z_matrix[0], "orange", label="z")
-            ax1.plot(x, self.get_z_min_list(), "g--", marker="x", label="zmin")
-            line3, = ax1.plot(x, h_matrix[0], color="pink", label="energy grade line")
-            ax1.set_ylim(min(self.get_z_min_list()), get_matrix_max(z_matrix)+get_matrix_max(y_matrix)) 
+        # if animate:
+        #     fig, ax1 = plt.subplots() 
+        #     line, = ax1.plot(x, np.array(y_matrix[0])+np.array(z_matrix[0]), label="water line")
+        #     ax1.set_ylabel("height (m)")
+        #     annotation = ax1.annotate(f"Q={hydrogram[0]}", ((self.get_x_max()-self.get_x_min())*0.7+self.get_x_min(), min(self.get_z_min_list())))
+        #     ax1.plot(x, z_matrix[0], "r", label="z at the begining")
+        #     # ax1.vlines(200, 180, 210)
+        #     line2, = ax1.plot(x, z_matrix[0], "orange", label="z")
+        #     ax1.plot(x, self.get_z_min_list(), "g--", marker="x", label="zmin")
+        #     line3, = ax1.plot(x, h_matrix[0], color="pink", label="energy grade line")
+        #     ax1.set_ylim(min(self.get_z_min_list()), get_matrix_max(z_matrix)+get_matrix_max(y_matrix)) 
 
-            plt.xlim(self.get_x_min(), self.get_x_max())
-            plt.xlabel("x")
-            ax1.set_title("Water depth and bottom evolution")
-            fig.set_size_inches(9.5, 5.5)
-            self.__plot_width_background(ax1)
-            plt.legend()
-            def animate(i): 
-                y = y_matrix[i%(len(y_matrix))]
-                z = z_matrix[i%(len(y_matrix))] # y_matrix because in case of error, there is one more element in z_matrix and we need y and z to be synchronized
-                h = h_matrix[i%(len(y_matrix))] # len(y_matrix) = len(h_matrix) so whatever 
-                annotation.set_text(f"Q={Q_history[i%(len(y_matrix))]:.2f}\n {(i%(len(y_matrix)))*100/(len(y_matrix)):.1f}%\n t={t_history[i%len(y_matrix)]:.3f}/{t_history[-1]:.3f}\n")
-                line.set_data(x, np.array(y)+np.array(z))
-                line2.set_data(x, z)
-                line3.set_data(x, h)
-                return line, line2, line3, annotation, 
-            time_ani = 60 # seconds
-            nb_frames = 1000 
-            frames=(range(len(y_matrix)) if len(y_matrix)<nb_frames else range(0, len(y_matrix), len(y_matrix)//nb_frames))
-            ani = animation.FuncAnimation(fig, animate, frames=frames, interval=time_ani*1000/len(y_matrix), repeat=True, repeat_delay=3000)
-            if backup:
-                print("saving animation...")
-                print(f"number of frames : {len(frames)}")
-                t0 = time()
-                ani.save("./animation.mp4", fps=len(frames)/time_ani, dpi=150)
-                print(f"animation saved ({time()-t0}).")
-            if debug:
-                print("[DEBUG] STARTING DEBUG")
-                answer = str(input("[DEBUG] \t Do you want to see the animation ? [yes/no] :"))
-                while answer != "yes" and answer != "no":
-                    answer = str(input("[DEBUG]\t please write 'yes' or 'no' : "))
-                if answer == "yes":
-                    plt.show()
-                else:
-                    plt.close()
-                while input("[DEBUG] write \"stop\" to leave the debug loop, else please press ENTER : ") != "stop":
-                    index = (int(input(f"[DEBUG]\t CHOOSE THE INDEX (<{len(profile_list)}) : ")))%(len(profile_list))
-                    test_profile = profile_list[index]
-                    if index == len(profile_list)-1:
-                        print("[DEBUG] \t\t\t last profile chosen.")
-                        test_profile.plot()
-                        plt.show()
-                    else:
-                        test_Q = hydrogram[index]
-                        test_y = test_profile.compute_depth(test_Q, plot=True)
-                        plt.show()
-                        answer = str(input("[DEBUG] \t Do you want to complete the profile ? [yes/no] :"))
-                        while answer != "yes" and answer != "no":
-                            answer = str(input("[DEBUG]\t please write 'yes' or 'no' : "))
-                        if answer=="yes":
-                            dx = int(input("[DEBUG] \t\t chose a dx : "))
-                            test_profile.complete(dx)
-                            test_y = test_profile.compute_depth(test_Q, plot=True)
-                            plt.show()
-                    answer = str(input("[DEBUG] \t Do you want to save this profile ? [yes/no] :"))
-                    while answer != "yes" and answer != "no":
-                        answer = str(input("[DEBUG]\t please write 'yes' or 'no' : "))
-                    if answer=="yes":
-                        filename = str(input("[DEBUG]\t please chose a filename : "))
-                        test_profile.export(filename)
-                        print("[DEBUG] profile saved.")
+        #     plt.xlim(self.get_x_min(), self.get_x_max())
+        #     plt.xlabel("x")
+        #     ax1.set_title("Water depth and bottom evolution")
+        #     fig.set_size_inches(9.5, 5.5)
+        #     self.__plot_width_background(ax1)
+        #     plt.legend()
+        #     def animate(i): 
+        #         y = y_matrix[i%(len(y_matrix))]
+        #         z = z_matrix[i%(len(y_matrix))] # y_matrix because in case of error, there is one more element in z_matrix and we need y and z to be synchronized
+        #         h = h_matrix[i%(len(y_matrix))] # len(y_matrix) = len(h_matrix) so whatever 
+        #         annotation.set_text(f"Q={Q_history[i%(len(y_matrix))]:.2f}\n {(i%(len(y_matrix)))*100/(len(y_matrix)):.1f}%\n t={t_history[i%len(y_matrix)]:.3f}/{t_history[-1]:.3f}\n")
+        #         line.set_data(x, np.array(y)+np.array(z))
+        #         line2.set_data(x, z)
+        #         line3.set_data(x, h)
+        #         return line, line2, line3, annotation, 
+        #     time_ani = 60 # seconds
+        #     nb_frames = 1000 
+        #     frames=(range(len(y_matrix)) if len(y_matrix)<nb_frames else range(0, len(y_matrix), len(y_matrix)//nb_frames))
+        #     ani = animation.FuncAnimation(fig, animate, frames=frames, interval=time_ani*1000/len(y_matrix), repeat=True, repeat_delay=3000)
+        #     if backup:
+        #         print("saving animation...")
+        #         print(f"number of frames : {len(frames)}")
+        #         t0 = time()
+        #         ani.save("./animation.mp4", fps=len(frames)/time_ani, dpi=150)
+        #         print(f"animation saved ({time()-t0}).")
+        #     if debug:
+        #         print("[DEBUG] STARTING DEBUG")
+        #         answer = str(input("[DEBUG] \t Do you want to see the animation ? [yes/no] :"))
+        #         while answer != "yes" and answer != "no":
+        #             answer = str(input("[DEBUG]\t please write 'yes' or 'no' : "))
+        #         if answer == "yes":
+        #             plt.show()
+        #         else:
+        #             plt.close()
+        #         while input("[DEBUG] write \"stop\" to leave the debug loop, else please press ENTER : ") != "stop":
+        #             index = (int(input(f"[DEBUG]\t CHOOSE THE INDEX (<{len(profile_list)}) : ")))%(len(profile_list))
+        #             test_profile = profile_list[index]
+        #             if index == len(profile_list)-1:
+        #                 print("[DEBUG] \t\t\t last profile chosen.")
+        #                 test_profile.plot()
+        #                 plt.show()
+        #             else:
+        #                 test_Q = hydrogram[index]
+        #                 test_y = test_profile.compute_depth(test_Q, plot=True)
+        #                 plt.show()
+        #                 answer = str(input("[DEBUG] \t Do you want to complete the profile ? [yes/no] :"))
+        #                 while answer != "yes" and answer != "no":
+        #                     answer = str(input("[DEBUG]\t please write 'yes' or 'no' : "))
+        #                 if answer=="yes":
+        #                     dx = int(input("[DEBUG] \t\t chose a dx : "))
+        #                     test_profile.complete(dx)
+        #                     test_y = test_profile.compute_depth(test_Q, plot=True)
+        #                     plt.show()
+        #             answer = str(input("[DEBUG] \t Do you want to save this profile ? [yes/no] :"))
+        #             while answer != "yes" and answer != "no":
+        #                 answer = str(input("[DEBUG]\t please write 'yes' or 'no' : "))
+        #             if answer=="yes":
+        #                 filename = str(input("[DEBUG]\t please chose a filename : "))
+        #                 test_profile.export(filename)
+        #                 print("[DEBUG] profile saved.")
+
+        # Performance.stop()
+        # Performance.print_perf()
 
         result = dict()
+        # x.reverse()
         result["abscissa"] = x
-        result["animation"] = ani if animate else None
+        # result["animation"] = ani if animate else None
         result["water_depth"] = y_matrix
         result["bottom_height"] = z_matrix
+        result["minimal_bottom_height"] = self.get_z_min_list()
         result["time"] = t_history
         result["energy"] = h_matrix
+        result["water_discharge"] = Q_history
+        result["sediment_discharge"] = Qs_history
+        result["critical_depth"] = yc_history
+        # result["normal_depth"] = yn_history
+        result["width"] = b_history
         
         return result
 
@@ -629,6 +683,7 @@ class Profile():
                 next_y = next_yc
             else:
                 next_y = next_section.get_y_from_Hs(next_Q, hs_next, supercritical=supercritical, yc=next_yc)
+
             if method!="Euler":
                 s2 = next_section.get_S0(up_direction=not(up_direction)) - next_section.get_Sf(next_Q, next_y, friction_law=friction_law)
                 hs_next = current_hs+ 0.5*(s1+s2)*dx
@@ -638,7 +693,7 @@ class Profile():
                     next_y = next_yc
                 else:
                     next_y = next_section.get_y_from_Hs(next_Q, hs_next, supercritical=supercritical, yc=next_yc)
-            
+
             # before_exit_loss = next_y
             current_v = current_section.get_V(current_Q, current_y)
             next_v = next_section.get_V(next_Q, next_y)

@@ -30,3 +30,6 @@ class Tab(QWidget):
         for i in range(self.tabBar.count()):
             if self.tabBar.widget(i) != self:
                 self.tabBar.setTabEnabled(i, True)
+
+    def processEvents(self):
+        self.tabBar.processEvents()

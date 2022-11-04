@@ -28,6 +28,12 @@ class Project():
         self.profileList = []
         self.profileSelected = None
         self.profileSelectedIndex = None
+        
+        self.modelList = []
+        self.modelSelected = None
+        self.modelSelectedIndex = None
+
+        self.resultList = []
 
     def getHydrogram(self, name):
         for h in self.hydrogramList:
@@ -41,6 +47,30 @@ class Project():
                 return g
         return None 
 
+    def getSedimentogram(self, name):
+        for s in self.sedimentogramList:
+            if s.name == name:
+                return s
+        return None 
+
+    def getProfile(self, name):
+        for p in self.profileList:
+            if p.name == name:
+                return p
+        return None 
+
+    def getModel(self, name):
+        for m in self.modelList:
+            if m.name == name:
+                return m
+        return None 
+
+    def getResult(self, name):
+        for r in self.resultList:
+            if r["name"] == name:
+                return r
+        return None
+
     def getHydrogramNameList(self):
         return [h.name for h in self.hydrogramList]
 
@@ -49,6 +79,15 @@ class Project():
 
     def getSedimentogramNameList(self):
         return [s.name for s in self.sedimentogramList]
+
+    def getProfileNameList(self):
+        return [p.name for p in self.profileList]
+
+    def getModelNameList(self):
+        return [m.name for m in self.modelList]
+
+    def getResultNameList(self):
+        return [r["name"] for r in self.resultList]
 
     def addHydrogram(self, hydrogram):
         self.hydrogramList.append(hydrogram)
@@ -69,6 +108,17 @@ class Project():
         self.profileList.append(profile)
         self.updateModifDate()
         self.needToBeSaved = True
+
+    def addModel(self, model):
+        self.modelList.append(model)
+        self.updateModifDate()
+        self.needToBeSaved = True
+
+    def addResult(self, result):
+        self.resultList.append(result)
+        self.updateModifDate()
+        self.needToBeSaved = True
+
 
     def setHydrogramSelected(self, name):
         for i, h in enumerate(self.hydrogramList):
@@ -101,6 +151,19 @@ class Project():
                 self.profileSelected = p
                 self.profileSelectedIndex = i
                 return
+
+    def setModelSelected(self, name):
+        for i, m in enumerate(self.modelList):
+            if m.name == name:
+                self.updateModifDate()
+                self.modelSelected = m
+                self.modelSelectedIndex = i
+                return
+
+    def setNoModelSelected(self):
+        self.updateModifDate()
+        self.modelSelected = None
+        self.modelSelectedIndex = None
 
     def deleteHydrogram(self, h):
         for i, h2 in enumerate(self.hydrogramList):
@@ -158,6 +221,30 @@ class Project():
                 else:
                     self.profileSelectedIndex = max(0, self.profileSelectedIndex - 1)
                     self.profileSelected = self.profileList[self.profileSelectedIndex]
+                self.needToBeSaved = True
+                return
+        return
+
+    def deleteModel(self, m):
+        for i, m2 in enumerate(self.modelList):
+            if m2 == m:
+                self.modelList.pop(i)
+                self.updateModifDate()
+                if len(self.modelList) == 0:
+                    self.modelSelected = None
+                    self.modelSelectedIndex = None
+                else:
+                    self.modelSelectedIndex = max(0, self.modelSelectedIndex - 1)
+                    self.modelSelected = self.modelList[self.modelSelectedIndex]
+                self.needToBeSaved = True
+                return
+        return
+
+    def deleteResult(self, rName):
+        for i, r in enumerate(self.resultList):
+            if r["name"] == rName:
+                self.resultList.pop(i)
+                self.updateModifDate()
                 self.needToBeSaved = True
                 return
         return

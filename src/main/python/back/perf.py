@@ -1,6 +1,6 @@
 import time as t
-# from prettytable import PrettyTable
 from back.utils import time_to_string
+import pandas as pd
 
 class Performance:
     """
@@ -20,10 +20,12 @@ class Performance:
             Performance.time_end = t.time()
         te = Performance.time_end
         ts = Performance.time_start
-        table = PrettyTable(['method name', '% of the execution time', 'total time spent (s)', 'number of call', 'mean time spent by call (s)'])
+        df = pd.DataFrame({'method name':[], '% of the execution time':[], 'total time spent (s)':[], 'number of call':[], 'mean time spent by call (s)':[]})
         for key, value in Performance.dict_of_perf.items():
-            table.add_row([key, f"{100*(value[0]/(te-ts)):.2f}%", float(f"{value[0]:.8f}"), f"{value[1]}", f"{value[0]/value[1]:.8f}"])
-        return table
+            new_row = {'method name':key, '% of the execution time':f"{100*(value[0]/(te-ts)):.2f}%", 'total time spent (s)':float(f"{value[0]:.8f}"), 'number of call':f"{value[1]}", 'mean time spent by call (s)':f"{value[0]/value[1]:.8f}"}
+            # new_row = [key, f"{100*(value[0]/(te-ts)):.2f}%", float(f"{value[0]:.8f}"), f"{value[1]}", f"{value[0]/value[1]:.8f}"]
+            df = df.append(new_row, ignore_index=True)
+        return df
 
     @staticmethod
     def print_perf():
@@ -37,17 +39,19 @@ class Performance:
                 Performance.time_end = t.time()
                 te = Performance.time_end
             print(f"total time : {time_to_string(te-ts)} \n")
-            table = Performance.get_perf_table()
+            df = Performance.get_perf_table()
+            df.sort_values(by=['total time spent (s)'], inplace=True, ascending=False)
             # for key, value in Performance.dict_of_perf.items():
             #     table.add_row([key, f"{100*(sum(value)/(te-ts)):.2f}%", f"{sum(value):.2f}s", f"{len(value)}", f"{np.mean(value)}s"])
-            print(table.get_string(sortby="total time spent (s)", reversesort=True))
+            print(df.to_string())
 
     @staticmethod
     def save_perf(filename):
-        table = Performance.get_perf_table()
+        df = Performance.get_perf_table()
+        df.sort_values(by=['total time spent (s)'], inplace=True, ascending=False)
         with open(filename, 'w') as f:
             f.writelines(f"total time = {Performance.time_end - Performance.time_start}\n")
-            f.writelines(table.get_string(sortby="total time spent (s)", reversesort=True))
+            f.writelines(df.to_string())
 
     @staticmethod
     def start():

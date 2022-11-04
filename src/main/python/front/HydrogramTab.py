@@ -94,9 +94,11 @@ class HydrogramTab(Tab):
         if self.editing:
             if QMessageBox.question(self, "Fin d'édition", "Voulez-vous enregistrer les modifications ?") == QMessageBox.No:
                 self.model.restore()
+            else:
+                self.getProject().needToBeSaved = True
             self.editWidget.setIcon(QIcon(self.getResource("images\\edit.png")))
             self.editWidget.setText(" EDIT")
-            self.hydrogramList.setSelectionMode(QAbstractItemView.SingleSelection)
+            self.hydrogramList.setEnabled(True)
             self.newHydrogramButton.setEnabled(True)
             self.copyWidget.setEnabled(True)
             self.binWidget.setEnabled(True)
@@ -104,7 +106,7 @@ class HydrogramTab(Tab):
         else:
             self.editWidget.setIcon(QIcon(self.getResource("images\\edit.png")))
             self.editWidget.setText(" STOP EDITING")
-            self.hydrogramList.setSelectionMode(QAbstractItemView.NoSelection)
+            self.hydrogramList.setEnabled(False)
             self.newHydrogramButton.setEnabled(False)
             self.copyWidget.setEnabled(False)
             self.binWidget.setEnabled(False)
@@ -134,10 +136,8 @@ class HydrogramTab(Tab):
             newName = h.name + f" ({i})"
         hCopy = h.copy(newName)
         self.getProject().addHydrogram(hCopy)
-        self.getProject().setHydrogramSelected(hCopy.name)
         item = QListWidgetItem(hCopy.name)
         self.hydrogramList.addItem(item)
-        self.hydrogramList.setCurrentItem(item)
         return
 
     def hydrogramChoiceChanged(self, name):

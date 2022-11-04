@@ -64,13 +64,13 @@ class DialogNewSedimentogram(QDialog):
 
         self.sedimentTransportLawList = QComboBox()
         self.sedimentTransportLawList.currentTextChanged.connect(self.classicalLawChanged)
-        for law in SEDIMENT_TRANSPORT_LAW_DICT.keys():
-            self.sedimentTransportLawList.addItem(law)
+        self.sedimentTransportLawList.addItems(SEDIMENT_TRANSPORT_LAW_DICT.keys())
         self.classicalGridLayout.addWidget(self.sedimentTransportLawList, 2, 1)
         self.sedimentoArgs['law'] = self.sedimentTransportLawList.currentText()    
 
         self.doubleBoxSlope = QDoubleSpinBox()
         self.doubleBoxSlope.valueChanged.connect(self.classicalSlopeChanged)
+        self.doubleBoxSlope.setSingleStep(0.001)
         self.doubleBoxSlope.setSuffix("   m/m")
         self.doubleBoxSlope.setMinimum(0)
         self.doubleBoxSlope.setMaximum(999999.99)

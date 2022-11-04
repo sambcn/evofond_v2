@@ -44,8 +44,12 @@ class TabBar(QTabWidget):
             self.widget(i).refresh()
 
     def clicked(self, index):
-        if index == 0:
-            self.projectTab.updateText()
-
+        if self.widget(index) != None:
+            self.widget(index).refresh()
+    
     def getResource(self, path):
         return self.parent().getResource(path)
+
+    def processEvents(self):
+        self.parent().processEvents()
+        

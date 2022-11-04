@@ -1,7 +1,7 @@
 from argparse import ArgumentError
-from src.perf import Performance
-from src.utils import G
-from src.irregularSection import IrregularSection
+from back.perf import Performance
+from back.utils import G
+from back.irregularSection import IrregularSection
 from scipy.optimize import newton
 
 import numpy as np
@@ -12,6 +12,8 @@ class TrapezoidalSection(IrregularSection):
         self.__b0 = b0
         if b0_min > b0:
             raise(ArgumentError("b0_min cannot be greater than b0 for a trapezoidal section"))
+        if b0_min < 0:
+            raise(ArgumentError("b0_min cannot be lower than 0 for a trapezoidal section"))
         self.__b0_min = b0_min
         if s_right != None:
             self.__f_right = 1/s_right
@@ -142,7 +144,7 @@ class TrapezoidalSection(IrregularSection):
 
     def set_b0(self, b0):
         if b0 < self.get_b0_min():
-            raise ValueError("in a trapezoidal section b0 must be >= b0_min")
+            raise ValueError("in a trapezoidal section b0 must be >= b0_min >= 0")
         self.__b0 == b0
 
     def get_b0_min(self):
@@ -184,11 +186,6 @@ class TrapezoidalSection(IrregularSection):
 
     def get_b(self, y=0, wet_points=None):
         return self.get_b0() + y*self.get_f_right() + y*self.get_f_left()
-
-    def set_b0(self, b0):
-        if b0 <= 0:
-            raise ValueError("width b0 can not be lower than 0")
-        self.__b0 = b0
 
     def get_S(self, y, wet_points=None):
         return (self.get_b0()+self.get_b(y, wet_points))*0.5*y

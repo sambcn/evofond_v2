@@ -1,6 +1,6 @@
-from src.perf import Performance
-from src.utils import G
-from src.irregularSection import IrregularSection
+from back.perf import Performance
+from back.utils import G
+from back.irregularSection import IrregularSection
 import numpy as np
 
 class RectangularSection(IrregularSection):

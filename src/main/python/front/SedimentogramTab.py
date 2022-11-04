@@ -94,9 +94,11 @@ class SedimentogramTab(Tab):
         if self.editing:
             if QMessageBox.question(self, "Fin d'édition", "Voulez-vous enregistrer les modifications ?") == QMessageBox.No:
                 self.model.restore()
+            else:
+                self.getProject().needToBeSaved = True
             self.editWidget.setIcon(QIcon(self.getResource("images\\edit.png")))
             self.editWidget.setText(" EDIT")
-            self.sedimentogramList.setSelectionMode(QAbstractItemView.SingleSelection)
+            self.sedimentogramList.setEnabled(True)
             self.newSedimentogramButton.setEnabled(True)
             self.copyWidget.setEnabled(True)
             self.binWidget.setEnabled(True)
@@ -104,7 +106,7 @@ class SedimentogramTab(Tab):
         else:
             self.editWidget.setIcon(QIcon(self.getResource("images\\edit.png")))
             self.editWidget.setText(" STOP EDITING")
-            self.sedimentogramList.setSelectionMode(QAbstractItemView.NoSelection)
+            self.sedimentogramList.setEnabled(False)
             self.newSedimentogramButton.setEnabled(False)
             self.copyWidget.setEnabled(False)
             self.binWidget.setEnabled(False)
@@ -134,10 +136,8 @@ class SedimentogramTab(Tab):
             newName = s.name + f" ({i})"
         sCopy = s.copy(newName)
         self.getProject().addSedimentogram(sCopy)
-        self.getProject().setSedimentogramSelected(sCopy.name)
         item = QListWidgetItem(sCopy.name)
         self.sedimentogramList.addItem(item)
-        self.sedimentogramList.setCurrentItem(item)
         return
 
     def sedimentogramChoiceChanged(self, name):

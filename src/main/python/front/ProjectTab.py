@@ -57,7 +57,6 @@ class ProjectTab(Tab):
             return
         self.currentProject = Project()
         self.editTextButtonRealeased()
-        self.updateText()
         self.tabBar.refresh()
         return
 
@@ -71,7 +70,6 @@ class ProjectTab(Tab):
         if dlg.exec():
             try:
                 self.currentProject = pkl.load(open(dlg.selectedFiles()[-1], 'rb'))
-                self.updateText()
                 self.tabBar.refresh()
             except (AttributeError, EOFError):
                 QMessageBox.critical(self, "Impossible d'ouvrir ce fichier", "Le fichier sélectionné est corrompu, impossible de le lire")
@@ -112,9 +110,13 @@ class ProjectTab(Tab):
         self.text.setText(str(self.currentProject))
         return
 
+    def refresh(self):
+        self.updateText()
+        return
+
     def leavingProjectCheck(self):
         if self.getProject().needToBeSaved:
-            button = QMessageBox.question(self, "Modifications non enregistrées", "Souhaitez vous enregistrez avant de quitter ?")
+            button = QMessageBox.question(self, "Modifications non enregistrées", "Souhaitez vous enregistrez avant de quitter ce projet ?")
             if button == QMessageBox.Yes:
                 self.saveProjectButtonReleased()
                 if self.getProject().needToBeSaved:

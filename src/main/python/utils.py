@@ -9,6 +9,27 @@ from back.sedimentTransport.rickenmann1991 import Rickenmann1991
 
 from back.granulometry import Granulometry as granuloBack
 
+AVAILABLE_HYDRAULIC_MODEL = [
+    "Régime critique",
+    "Régime varié avec loi de frottement"
+]
+
+AVAILABLE_FRICTION_LAW = [
+    "Ferguson",
+    "Manning-Strickler"
+]
+
+AVAILABLE_LIMITS = [
+    "Personalisée",
+    "Hauteur critique",
+    "Hauteur normale"
+]
+
+AVAILABLE_SECTION_TYPES = [
+    "Rectangular",
+    "Trapezoidal"
+    ]
+
 SEDIMENT_TRANSPORT_LAW_DICT = {
     "Meunier1989": Meunier1989 ,
     "Lefort2015": Lefort2015,
@@ -22,8 +43,18 @@ SEDIMENT_TRANSPORT_LAW_DICT = {
 
 def calcSedimentogram(lawName, QList, width, slope, granulometry):
     law = SEDIMENT_TRANSPORT_LAW_DICT[lawName]()
-    granulometryBack = granuloBack(granulometry.dm, granulometry.d30, granulometry.d50, granulometry.d90, granulometry.d84tb, granulometry.d84bs, granulometry.Gr)
+    granulometryBack = convertGranuloFromFrontToBack(granulometry)
     QsList = []
     for Q in QList:
         QsList.append(law.compute_Qs_formula(width, granulometryBack, Q, slope))
     return QsList
+
+def convertGranuloFromFrontToBack(granulometry):
+    return granuloBack(granulometry.dm, granulometry.d30, granulometry.d50, granulometry.d90, granulometry.d84tb, granulometry.d84bs, granulometry.Gr)
+
+
+class PopupError(Exception):
+    """
+    Exception raised when you want to show a critical QMessageBox.critical
+    """
+    pass

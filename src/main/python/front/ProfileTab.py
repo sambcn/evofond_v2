@@ -10,8 +10,10 @@ from PyQt5.QtCore import Qt
 from front.Tab import Tab
 from front.Profile import Profile
 from front.DialogNewProfile import DialogNewProfile
+from front.DialogEditProfileGranulo import DialogEditProfileGranulo
 from front.DialogDelete import DialogDelete
 from front.TableModel import TableModel
+from front.ProfileGranuloTable import ProfileGranuloTable
 from front.MplCanvas import MplCanvas, NavigationToolbar
 
 import pandas as pd
@@ -55,6 +57,18 @@ class ProfileTab(Tab):
         self.table.setHorizontalHeader(header)
         self.setTableData()
         self.tableLayout.addWidget(self.table)
+
+        self.tableLayout.addWidget(QLabel("Gestion de la granulométrie :"))
+        self.granuloTable = QTableView()
+        header = self.granuloTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.granuloTable.setHorizontalHeader(header)
+        self.granuloModel = ProfileGranuloTable(self)
+        self.granuloTable.setModel(self.granuloModel)
+        self.tableLayout.addWidget(self.granuloTable)
+        self.editGranuloButton = QPushButton(" Modifier")
+        self.editGranuloButton.setIcon(QIcon(self.getResource("images\\edit.png")))
+        self.editGranuloButton.released.connect(self.editGranuloButtonReleased)
+        self.tableLayout.addWidget(self.editGranuloButton)
 
         self.tableLayout.addWidget(QLabel("Données à tracer : "), alignment=Qt.AlignTop)
 
@@ -109,13 +123,24 @@ class ProfileTab(Tab):
             context.addAction(deleteLine)
             context.exec(self.table.mapToGlobal(pos))
 
+    def editGranuloButtonReleased(self):
+        p = self.getProject().profileSelected
+        if p == None:
+            return
+        dlg = DialogEditProfileGranulo(self, p)
+        if dlg.exec():
+            p.granulo = dlg.newGranulo
+            self.granuloModel.refreshData()
+
     def newProfileButtonReleased(self):
         dlg = DialogNewProfile(self)
         if dlg.exec():
             newProfile = Profile(**dlg.profileArgs)
             self.getProject().addProfile(newProfile)
+            self.getProject().setProfileSelected(newProfile.name)
             item = QListWidgetItem(newProfile.name)
             self.profileList.addItem(item)
+            self.profileList.setCurrentItem(item)
             return
         pass
 
@@ -126,20 +151,24 @@ class ProfileTab(Tab):
         if self.editing:
             if QMessageBox.question(self, "Fin d'édition", "Voulez-vous enregistrer les modifications ?") == QMessageBox.No:
                 self.model.restore()
+            else:
+                self.getProject().needToBeSaved = True
             self.editProfileButton.setIcon(QIcon(self.getResource("images\\edit.png")))
             self.editProfileButton.setText(" EDIT")
-            self.profileList.setSelectionMode(QAbstractItemView.SingleSelection)
+            self.profileList.setEnabled(True)
             self.newProfileButton.setEnabled(True)
             self.copyProfileButton.setEnabled(True)
             self.deleteProfileButton.setEnabled(True)
+            self.editGranuloButton.setEnabled(True)
             self.enableOtherTabs()
         else:
             self.editProfileButton.setIcon(QIcon(self.getResource("images\\edit.png")))
             self.editProfileButton.setText(" STOP EDITING")
-            self.profileList.setSelectionMode(QAbstractItemView.NoSelection)
+            self.profileList.setEnabled(False)
             self.newProfileButton.setEnabled(False)
             self.copyProfileButton.setEnabled(False)
             self.deleteProfileButton.setEnabled(False)
+            self.editGranuloButton.setEnabled(False)
             self.disableOtherTabs()
         self.editing = not(self.editing)
         self.model.changeEditionMode()
@@ -205,6 +234,7 @@ class ProfileTab(Tab):
     def profileChoiceChanged(self, name):
         self.getProject().setProfileSelected(name)
         self.setTableData()
+        self.granuloModel.refreshData()
         self.updateVarLists()
 
     def makeVarListsEmpty(self):

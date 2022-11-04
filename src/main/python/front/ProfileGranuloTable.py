@@ -2,34 +2,21 @@ from PyQt5.QtCore import QAbstractTableModel, Qt
 
 import pandas as pd
 
-class GranuloTableModel(QAbstractTableModel):
+class ProfileGranuloTable(QAbstractTableModel):
 
     def __init__(self, tab):
-        super(GranuloTableModel, self).__init__()
+        super(ProfileGranuloTable, self).__init__()
         self.tab = tab
         self.refreshData()
 
     def refreshData(self):
-        granuloList = self.tab.getProject().granulometryList
-        name = []
-        dm = []
-        d30 = []
-        d50 = []
-        d90 = []
-        d84tb = []
-        d84bs = []
-        Gr = []
-        for g in granuloList:
-            name.append(g.name)
-            dm.append(g.dm)
-            d30.append(g.d30)
-            d50.append(g.d50)
-            d90.append(g.d90)
-            d84tb.append(g.d84tb)
-            d84bs.append(g.d84bs)
-            Gr.append(g.Gr)
-        self.data = pd.DataFrame({"nom":name, "dm":dm, "d30":d30, "d50":d50, "d90":d90, "d84tb":d84tb, "d84bs":d84bs, "Gr":Gr})
-        self.data.set_index("nom")
+        p = self.tab.getProject().profileSelected
+        if p == None:
+            self.data = pd.DataFrame()
+            return
+        granuloData = p.granulo
+        self.data = pd.DataFrame(granuloData)
+        self.data.set_index("x début")
         self.layoutChanged.emit()
 
     def data(self, index, role):

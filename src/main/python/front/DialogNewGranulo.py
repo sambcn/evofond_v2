@@ -8,7 +8,7 @@ from front.Granulometry import Granulometry
 class DialogNewGranulo(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
-        self.setWindowTitle("New profile")
+        self.setWindowTitle("New granulometry")
         self.setFont(QFont('Arial font', 12))
 
         QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel

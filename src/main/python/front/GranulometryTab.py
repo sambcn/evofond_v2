@@ -83,20 +83,13 @@ class GranulometryTab(Tab):
             newName = g.name + f" ({i})"
         gCopy = g.copy(newName)
         self.getProject().addGranulometry(gCopy)
-        self.getProject().setGranulometrySelected(gCopy.name)
         item = QListWidgetItem(gCopy.name)
         self.granuloList.addItem(item)
-        self.granuloList.setCurrentItem(item)
         self.model.refreshData()
-        return
-
-    def makeGranuloListEmpty(self):
-        for i in range(self.granuloList.count()-1, -1, -1):
-            self.franuloList.takeItem(i)
         return
         
     def setGranuloList(self):
-        self.makeGranuloListEmpty()
+        self.granuloList.clear()
         for i, h in enumerate(self.getProject().granulometryList):
             item = QListWidgetItem(h.name)
             item.setSelected(i == self.getProject().granulometrySelectedIndex)
