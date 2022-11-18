@@ -109,7 +109,7 @@ class DialogEditProfileGranulo(QDialog):
                 QMessageBox.critical(self, "Erreur : les abscisses choisies ne recouvrent pas le profil", f"Le plus petit abscisse donné est plus grand que le minimum des abscisses du profile ({self.newGranulo[self.newGranulo.columns[1]].min()} > {min(xList)})")
                 return
             if max(xList) > self.newGranulo[self.newGranulo.columns[2]].max():
-                QMessageBox.critical(self, "Erreur : les abscisses choisies ne recouvrent pas le profil", f"Le plus grand abscisse donné est plus petit que le maximum des abscisses du profile ({self.newGranulo[self.newGranulo.columns[1]].max()} < {max(xList)})")
+                QMessageBox.critical(self, "Erreur : les abscisses choisies ne recouvrent pas le profil", f"Le plus grand abscisse donné est plus petit que le maximum des abscisses du profile ({self.newGranulo[self.newGranulo.columns[2]].max()} < {max(xList)})")
                 return
         self.accept()
 
