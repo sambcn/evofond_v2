@@ -1,6 +1,16 @@
-## evofond_v2
+### evofond_v2
 
 Evofond with an epic GUI
+
+# How do I get it ?
+
+Go on the git to work with source code : https://github.com/sambcn/evofond_v2 
+
+If you just want the application, you can download the following zip :
+
+Evofond V0 : https://drive.google.com/file/d/1xfsp9qYRfuhmhrSzmGClgykUCYwSy-nq/view?usp=sharing 
+
+## Working with code source
 
 # How to launch it ?
 
