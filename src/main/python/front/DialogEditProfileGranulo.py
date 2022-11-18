@@ -88,6 +88,7 @@ class DialogEditProfileGranulo(QDialog):
         return
 
     def setUpDoubleBox(self, doubleBox, i, j, value=None):
+        doubleBox.setDecimals(3)
         xmin = self.profile.data[self.profile.data.columns[0]].min()
         xmax = self.profile.data[self.profile.data.columns[0]].max()
         doubleBox.setMinimum(xmin)
