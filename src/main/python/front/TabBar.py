@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QTabWidget
-from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QTabWidget, QShortcut
+from PyQt5.QtGui import QFont, QKeySequence
 
 from front.ProjectTab import ProjectTab 
 from front.HydrogramTab import HydrogramTab 
@@ -33,6 +33,13 @@ class TabBar(QTabWidget):
         self.tabBarClicked.connect(self.clicked)
 
         self.setFont(QFont('Arial font', 12))
+
+        self.newproject_shortcut = QShortcut(QKeySequence("Ctrl+N"), self)
+        self.newproject_shortcut.activated.connect(self.projectTab.newProjectButtonReleased)
+        self.open_shortcut = QShortcut(QKeySequence("Ctrl+O"), self)
+        self.open_shortcut.activated.connect(self.projectTab.loadProjectButtonReleased)
+        self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        self.save_shortcut.activated.connect(self.projectTab.saveProjectButtonReleased)
 
         return
 

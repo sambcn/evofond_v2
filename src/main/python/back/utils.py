@@ -164,18 +164,32 @@ def get_matrix_max(matrix):
     except IndexError as e:
         raise IndexError(f"Matrix must have at least one element. {e}")
 
-def time_to_string(t):
+def time_to_string(t, decimals=3):
     """return a string to print a given time t in seconds with the format Ah Bm Cs"""
     hours = int(t) // 3600
     minutes = (int(t) - 3600*hours) // 60
     seconds = t%60
+    if not(decimals in range(6)):
+        raise ValueError("decimals must be an integer between 0 and 5")
+    if decimals == 0:
+        seconds_str = f"{seconds:.0f}s"
+    if decimals == 1:
+        seconds_str = f"{seconds:.1f}s"
+    if decimals == 2:
+        seconds_str = f"{seconds:.2f}s"
+    if decimals == 3:
+        seconds_str = f"{seconds:.3f}s"
+    if decimals == 4:
+        seconds_str = f"{seconds:.4f}s"
+    if decimals == 5:
+        seconds_str = f"{seconds:.5f}s"
     if hours == 0:
         if minutes == 0:
-            return f"{seconds:.2f}s"
+            return seconds_str
         else:
-            return f"{minutes}min {seconds:.2f}s"
+            return f"{minutes}min " + seconds_str
     else:
-        return f"{hours}h {minutes}min {seconds:.2f}s"
+        return f"{hours}h {minutes}min " + seconds_str
 
 def read_hecras_data(filename):
     """

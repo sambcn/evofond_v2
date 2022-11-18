@@ -5,6 +5,7 @@ class Hydrogram():
 
     def __init__(self, hydroArgs):
         self.name = hydroArgs["name"]
+        self.properties = f"méthode de création : {hydroArgs['type']}\n"
         if hydroArgs["type"] == "Lavabre":
             self.initLavabre(hydroArgs)
         elif hydroArgs["type"] == "Importer":
@@ -15,14 +16,19 @@ class Hydrogram():
             self.data = hydroArgs["data"]
 
     def initLavabre(self, hydroArgs):
-        NB_POINTS = 1000
-        t = np.linspace(0, hydroArgs['d'], NB_POINTS)
+        t = np.arange(0, hydroArgs['d'], hydroArgs['dt'])
         Qmax = hydroArgs["Qmax"]
         Qbase = hydroArgs["Qmin"]
         tm = hydroArgs["tmax"]
         alpha = hydroArgs["alpha"]
         Q=np.array([(Qmax-Qbase)*2*np.power(ti/tm,alpha)/(1+np.power(ti/tm,2*alpha))+Qbase for ti in t])
         self.data = pd.DataFrame({'t (s)':t, 'Q (m3/s)':Q})
+        self.properties += f"d : {hydroArgs['d']}s\n"
+        self.properties += f"dt : {hydroArgs['dt']}s\n"
+        self.properties += f"Qmax : {Qmax}m3/s\n"
+        self.properties += f"Qbase : {Qbase}m3/s\n"
+        self.properties += f"tm : {tm}s\n"
+        self.properties += f"alpha : {alpha}\n"
 
     def initImport(self, hydroArgs):
         data = pd.read_csv(hydroArgs["path"])
@@ -31,6 +37,8 @@ class Hydrogram():
             raise ValueError("Hydrogram data must have at least two columns to describe Q(t)")
         
         self.data = data[[data.columns[0], data.columns[1]]]
+        self.data = self.data.rename(columns={data.columns[0]:"t (s)", data.columns[1]:"Q (m3/s)"})
+        self.properties += f"chemin du fichier importé : {hydroArgs['path']}"
             
     def copy(self, name):
         return Hydrogram({"name":name, "data":self.data.copy(), "type":"copy"})

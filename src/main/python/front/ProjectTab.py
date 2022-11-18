@@ -9,7 +9,7 @@ from front.Tab import Tab
 from front.Project import Project
 
 import pickle as pkl
-
+import gc
 
 class ProjectTab(Tab):
     
@@ -17,13 +17,13 @@ class ProjectTab(Tab):
         super(ProjectTab, self).__init__(tabBar, "Projet", tabBar.getResource("images\\project.png"))
         
         self.currentProject = Project()
-        self.newProjectButton = QPushButton(" Nouveau projet")
+        self.newProjectButton = QPushButton(" Nouveau projet (Ctrl+N)")
         self.newProjectButton.setIcon(QIcon(self.getResource("images\\add.png")))
         self.newProjectButton.released.connect(self.newProjectButtonReleased)
-        self.loadProjectButton = QPushButton(" Charger projet")
+        self.loadProjectButton = QPushButton(" Ouvrir projet (Ctrl+O)")
         self.loadProjectButton.setIcon(QIcon(self.getResource("images\\load.png")))
         self.loadProjectButton.released.connect(self.loadProjectButtonReleased)
-        self.saveProjectButton = QPushButton(" Enregistrer")
+        self.saveProjectButton = QPushButton(" Enregistrer (Ctrl+S)")
         self.saveProjectButton.setIcon(QIcon(self.getResource("images\\save.png")))
         self.saveProjectButton.released.connect(self.saveProjectButtonReleased)
         self.saveAsProjectButton = QPushButton(" Enregistrer sous")
@@ -69,7 +69,11 @@ class ProjectTab(Tab):
         dlg.setNameFilter("*.evf")
         if dlg.exec():
             try:
-                self.currentProject = pkl.load(open(dlg.selectedFiles()[-1], 'rb'))
+                f = open(dlg.selectedFiles()[-1], 'rb')
+                gc.disable()
+                self.currentProject = pkl.load(f)
+                gc.enable()
+                f.close()
                 self.tabBar.refresh()
             except (AttributeError, EOFError):
                 QMessageBox.critical(self, "Impossible d'ouvrir ce fichier", "Le fichier sélectionné est corrompu, impossible de le lire")

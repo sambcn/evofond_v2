@@ -27,6 +27,20 @@ class Model():
         m.downstreamCondition = self.downstreamCondition
         return m
 
+    def __str__(self):
+        string = f"modèle = {self.name}\n"
+        string += f"hydrogramme = {self.hydrogram}\n"
+        string += f"sedimentogramme = {self.sedimentogram}\n"
+        string += f"profil = {self.profile}\n"
+        string += f"loi de transport = {self.sedimentTransportLaw}\n"
+        string += f"interpolation = {self.interpolation}\n"
+        string += f"dx = {self.dx}\n"
+        string += f"modèle hydraulique = {self.hydroModel}\n"
+        string += f"loi de frottement = {self.frictionLaw}\n"
+        string += f"condition amont = {self.upstreamCondition}\n"
+        string += f"condition avale = {self.downstreamCondition}\n"
+        return string
+
     def getBoolState(self, project):
         if self.getStringState(project) == "":
             return True

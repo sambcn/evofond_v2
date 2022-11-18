@@ -1,6 +1,7 @@
 from PyQt5.QtCore import QDateTime
 
 import pickle as pkl
+import gc
 
 class Project():
 
@@ -33,8 +34,6 @@ class Project():
         self.modelSelected = None
         self.modelSelectedIndex = None
 
-        self.resultList = []
-
     def getHydrogram(self, name):
         for h in self.hydrogramList:
             if h.name == name:
@@ -65,12 +64,6 @@ class Project():
                 return m
         return None 
 
-    def getResult(self, name):
-        for r in self.resultList:
-            if r["name"] == name:
-                return r
-        return None
-
     def getHydrogramNameList(self):
         return [h.name for h in self.hydrogramList]
 
@@ -85,9 +78,6 @@ class Project():
 
     def getModelNameList(self):
         return [m.name for m in self.modelList]
-
-    def getResultNameList(self):
-        return [r["name"] for r in self.resultList]
 
     def addHydrogram(self, hydrogram):
         self.hydrogramList.append(hydrogram)
@@ -113,12 +103,6 @@ class Project():
         self.modelList.append(model)
         self.updateModifDate()
         self.needToBeSaved = True
-
-    def addResult(self, result):
-        self.resultList.append(result)
-        self.updateModifDate()
-        self.needToBeSaved = True
-
 
     def setHydrogramSelected(self, name):
         for i, h in enumerate(self.hydrogramList):
@@ -240,20 +224,15 @@ class Project():
                 return
         return
 
-    def deleteResult(self, rName):
-        for i, r in enumerate(self.resultList):
-            if r["name"] == rName:
-                self.resultList.pop(i)
-                self.updateModifDate()
-                self.needToBeSaved = True
-                return
-        return
-
     def save(self):
         memory = self.needToBeSaved 
         try:
             self.needToBeSaved = False
-            pkl.dump(self, open(self.path, 'wb'))
+            f = open(self.path, 'wb')
+            gc.disable()
+            pkl.dump(self, f, protocol=-1)
+            gc.enable()
+            f.close()
         except TypeError as e:
             self.needToBeSaved = memory
             raise(e)

@@ -70,12 +70,13 @@ class DialogNewSedimentogram(QDialog):
 
         self.doubleBoxSlope = QDoubleSpinBox()
         self.doubleBoxSlope.valueChanged.connect(self.classicalSlopeChanged)
-        self.doubleBoxSlope.setSingleStep(0.001)
-        self.doubleBoxSlope.setSuffix("   m/m")
+        self.doubleBoxSlope.setSingleStep(0.1)
+        self.doubleBoxSlope.setDecimals(3)
+        self.doubleBoxSlope.setSuffix("   %")
         self.doubleBoxSlope.setMinimum(0)
-        self.doubleBoxSlope.setMaximum(999999.99)
+        self.doubleBoxSlope.setMaximum(999.999)
         self.classicalGridLayout.addWidget(self.doubleBoxSlope, 3, 1)
-        self.sedimentoArgs['slope'] = self.doubleBoxSlope.value()    
+        self.sedimentoArgs['slope'] = self.doubleBoxSlope.value()/100 # conversion % en m/m
 
         self.doubleBoxWidth = QDoubleSpinBox()
         self.doubleBoxWidth.valueChanged.connect(self.classicalWidthChanged)
@@ -123,7 +124,7 @@ class DialogNewSedimentogram(QDialog):
         self.sedimentoArgs["law"] = l
 
     def classicalSlopeChanged(self, s):
-        self.sedimentoArgs["slope"] = s
+        self.sedimentoArgs["slope"] = s/100 # conversion % en m/m
 
     def classicalWidthChanged(self, w):
         self.sedimentoArgs["width"] = w

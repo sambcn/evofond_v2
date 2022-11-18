@@ -10,6 +10,7 @@ from front.TableModel import TableModel
 from front.MplCanvas import MplCanvas, NavigationToolbar
 from front.DialogNewSedimentogram import DialogNewSedimentogram
 from front.DialogDelete import DialogDelete
+from front.DialogQuestionAnswer import DialogQuestionAnswer
 
 class SedimentogramTab(Tab):
     
@@ -21,6 +22,8 @@ class SedimentogramTab(Tab):
         self.setSedimentogramList()        
         self.sedimentogramList.currentTextChanged.connect(self.sedimentogramChoiceChanged)
         self.layoutList.addWidget(self.sedimentogramList)
+        self.sedimentogramList.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.sedimentogramList.customContextMenuRequested.connect(self.contextMenuOnList)
        
         self.binWidget = QPushButton(" DELETE")
         self.binWidget.setIcon(QIcon(self.getResource("images\\trash.png")))
@@ -31,14 +34,22 @@ class SedimentogramTab(Tab):
         self.editWidget = QPushButton(" EDIT")
         self.editWidget.setIcon(QIcon(self.getResource("images\\edit.png")))
         self.editWidget.released.connect(self.editButtonReleased)
+        self.renameWidget = QPushButton(" RENAME")
+        self.renameWidget.setIcon(QIcon(self.getResource("images\\rename.png")))
+        self.renameWidget.released.connect(self.renameButtonReleased)
+        self.propertiesWidget = QPushButton(" PROPERTIES")
+        self.propertiesWidget.setIcon(QIcon(self.getResource("images\\properties.png")))
+        self.propertiesWidget.released.connect(self.propertiesButtonReleased)
         self.editing = False
         self.newSedimentogramButton = QPushButton(" NEW")
         self.newSedimentogramButton.setIcon(QIcon(self.getResource("images\\add.png")))
         self.newSedimentogramButton.released.connect(self.newSedimentogramButtonReleased)
         self.layoutList.addWidget(self.newSedimentogramButton)
+        self.layoutList.addWidget(self.renameWidget)
         self.layoutList.addWidget(self.editWidget)
         self.layoutList.addWidget(self.copyWidget)
         self.layoutList.addWidget(self.binWidget)
+        self.layoutList.addWidget(self.propertiesWidget)
 
         self.sedimentogramData = QTableView()
         self.sedimentogramData.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -61,16 +72,45 @@ class SedimentogramTab(Tab):
         layoutInter.addLayout(self.layoutData)
         self.layout.addLayout(layoutInter)
         self.layout.addLayout(self.layoutPlot)
+
+    def contextMenuOnList(self, pos):
+        context = QMenu(self)
+        item = self.sedimentogramList.itemAt(pos)
+        if item != None:
+            self.getProject().setSedimentogramSelected(item.text())
+            rename = QAction("Renommer", self.sedimentogramList)
+            edit = QAction("Editer", self.sedimentogramList)
+            copy = QAction("Copier", self.sedimentogramList)
+            delete = QAction("Supprimer", self.sedimentogramList)
+            properties = QAction("Propriétés", self.sedimentogramList)
+            rename.triggered.connect(self.renameButtonReleased)
+            edit.triggered.connect(self.editButtonReleased)
+            copy.triggered.connect(self.copyButtonReleased)
+            delete.triggered.connect(self.deleteButtonReleased)
+            properties.triggered.connect(self.propertiesButtonReleased)
+            context.addAction(rename)
+            context.addAction(edit)
+            context.addAction(copy)
+            context.addAction(delete)
+            context.addAction(properties)
+        else:
+            newSedimentogram = QAction("Nouveau sédimentogramme", self.sedimentogramList)
+            newSedimentogram.triggered.connect(self.newSedimentogramButtonReleased)
+            context.addAction(newSedimentogram)
+        context.exec(self.sedimentogramList.mapToGlobal(pos))
     
     def contextMenuOnTable(self, pos):
         context = QMenu(self)
         if self.editing:
+            paste = QAction("Coller", self.sedimentogramData)
             addUpperLine = QAction("Insérer une ligne au-dessus", self.sedimentogramData)
             addLowerLine = QAction("Insérer une ligne en-dessous", self.sedimentogramData)
             deleteLine = QAction("Supprimer cette ligne", self.sedimentogramData)
+            paste.triggered.connect(self.model.paste(self.sedimentogramData.indexAt(pos)))
             addUpperLine.triggered.connect(self.model.addUpperLineForConnection(self.sedimentogramData.indexAt(pos)))
             addLowerLine.triggered.connect(self.model.addLowerLineForConnection(self.sedimentogramData.indexAt(pos)))
             deleteLine.triggered.connect(self.model.deleteLineForConnection(self.sedimentogramData.indexAt(pos)))
+            context.addAction(paste)
             context.addAction(addUpperLine)
             context.addAction(addLowerLine)
             context.addAction(deleteLine)
@@ -85,6 +125,26 @@ class SedimentogramTab(Tab):
             item = QListWidgetItem(newSedimentogram.name)
             self.sedimentogramList.addItem(item)
             self.sedimentogramList.setCurrentItem(item)
+        return
+
+    def renameButtonReleased(self):
+        s = self.getProject().sedimentogramSelected
+        if s == None:
+            return
+        dlg = DialogQuestionAnswer(self, f"Choississez un nouveau nom pour l'hydrogramme {s.name}")
+        if dlg.exec():
+            newName = dlg.answer
+            if newName.split() == []:
+                QMessageBox.critical(self, "Nom invalide", "Le nom choisi est invalide")
+                return
+            if newName == s.name:
+                QMessageBox.information(self, "Nom identique", "Le nom est inchangé")
+                return
+            if newName in self.getProject().getSedimentogramNameList():
+                QMessageBox.critical(self, "Nom invalide", "Le nom choisi est déjà pris par un autre sédimentogramme")
+                return
+            s.name = newName
+            self.setSedimentogramList()
         return
 
     def editButtonReleased(self):
@@ -102,6 +162,8 @@ class SedimentogramTab(Tab):
             self.newSedimentogramButton.setEnabled(True)
             self.copyWidget.setEnabled(True)
             self.binWidget.setEnabled(True)
+            self.renameWidget.setEnabled(True)
+            self.propertiesWidget.setEnabled(True)
             self.enableOtherTabs()
         else:
             self.editWidget.setIcon(QIcon(self.getResource("images\\edit.png")))
@@ -110,6 +172,8 @@ class SedimentogramTab(Tab):
             self.newSedimentogramButton.setEnabled(False)
             self.copyWidget.setEnabled(False)
             self.binWidget.setEnabled(False)
+            self.renameWidget.setEnabled(False)
+            self.propertiesWidget.setEnabled(False)
             self.disableOtherTabs()
         self.editing = not(self.editing)
         self.model.changeEditionMode()
@@ -140,6 +204,12 @@ class SedimentogramTab(Tab):
         self.sedimentogramList.addItem(item)
         return
 
+    def propertiesButtonReleased(self):
+        s = self.getProject().sedimentogramSelected
+        if s == None:
+            return
+        QMessageBox.information(self, f"propriétés de {s.name}", s.properties)
+
     def sedimentogramChoiceChanged(self, name):
         self.getProject().setSedimentogramSelected(name)
         self.displayData()
@@ -162,7 +232,7 @@ class SedimentogramTab(Tab):
         self.sc.axes.lines.clear()
         self.sc.axes.set_prop_cycle(None)
         subdf = df[~(df[df.columns[0]].isnull()) & ~(df[df.columns[1]].isnull())]
-        self.sc.axes.plot(subdf[subdf.columns[0]], subdf[subdf.columns[1]])
+        self.sc.axes.plot(subdf[subdf.columns[0]], subdf[subdf.columns[1]], color="orange")
         self.sc.axes.set_xlabel(subdf.columns[0])
         self.sc.axes.set_ylabel(subdf.columns[1])
         self.sc.axes.relim()

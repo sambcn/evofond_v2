@@ -7,12 +7,12 @@ from PyQt5.QtGui import QFont, QIcon
 
 from front.DialogQuestionAnswer import DialogQuestionAnswer
 from frontToBack import simulateModel
+from utils import time_to_string
 
 class DialogNewSimulation(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
         self.setWindowFlag(Qt.WindowMinimizeButtonHint, True)
-        self.setWindowFlag(Qt.WindowMaximizeButtonHint, True)
         self.setWindowTitle("New simulation")
         self.setFont(QFont('Arial font', 12))
 
@@ -78,7 +78,7 @@ class DialogNewSimulation(QDialog):
             if not(m in keys):
                 name = m
                 index = 1
-                while name in self.parent().getProject().getResultNameList() or name in values:
+                while name in self.parent().getResultNameList() or name in values:
                     name = m + f" ({index})"
                     index += 1
                 self.nameResultDict[m] = name
@@ -91,7 +91,7 @@ class DialogNewSimulation(QDialog):
         def f():
             dlg = DialogQuestionAnswer(self, "Choisissez le nouveau nom : ")
             if dlg.exec():
-                if dlg.answer in self.parent().getProject().getResultNameList():
+                if dlg.answer in self.parent().getResultNameList():
                     QMessageBox.critical(self, "Nom déjà existant", "Ce nom existe déjà.")
                     return
                 elif dlg.answer == self.nameResultDict[m]:
@@ -147,10 +147,9 @@ class DialogNewSimulation(QDialog):
             if result == None:
                 continue
             result["name"] = self.nameResultDict[m]
-            p.addResult(result)
-            item = QListWidgetItem(result["name"])
-            self.parent().resultList.addItem(item)
-            self.parent().resultList.setCurrentItem(item)
+            result["model"] = str(model)
+            self.parent().addResult(result)
+            
 
         return  
 
@@ -162,8 +161,8 @@ class DialogNewSimulation(QDialog):
     def updateProgressBar(self, percentage):
         self.pBarList[self.currentModelIndex].setValue(percentage)
 
-    def updateModelSimulationLabel(self, time):
-        self.modelSimulationLabelList[self.currentModelIndex].setText(f"computation time : {time:.3f}s")
+    def updateModelSimulationLabel(self, time, expectedTime=None):
+        self.modelSimulationLabelList[self.currentModelIndex].setText(f"temps de calcul : {time_to_string(time)}\n{'temps total estimé : '+time_to_string(expectedTime, decimals=0) if expectedTime != None else ''}")
 
     def closeEvent(self, event):
         event.ignore()
@@ -172,6 +171,7 @@ class DialogNewSimulation(QDialog):
     def end(self):
         self.parent().enableOtherTabs()
         self.parent().newSimulationButton.setEnabled(True)
+        self.parent().loadResultButton.setEnabled(True)
         self.reject()
 
     def processEvents(self):

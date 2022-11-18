@@ -1,4 +1,5 @@
-from PyQt5.QtCore import QAbstractTableModel, Qt
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import QAbstractTableModel, Qt, QModelIndex
 
 import pandas as pd
 
@@ -62,6 +63,18 @@ class TableModel(QAbstractTableModel):
 
             if orientation == Qt.Vertical:
                 return ""
+
+    def paste(self, index):
+        def _paste():
+            row = index.row()
+            column = index.column()
+            clipboard = QApplication.clipboard()
+            rows = clipboard.text().split("\n")
+            for i, r in enumerate(rows):
+                values = r.split("\t")
+                for j, val in enumerate(values):
+                    self.setData(self.index(row+i, column+j), val, Qt.EditRole)
+        return _paste
 
     def addUpperLineForConnection(self, index):
         def _addUpperLine():

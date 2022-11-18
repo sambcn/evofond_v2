@@ -10,6 +10,7 @@ from PyQt5.QtCore import Qt
 from front.Tab import Tab
 from front.Profile import Profile
 from front.DialogNewProfile import DialogNewProfile
+from front.DialogQuestionAnswer import DialogQuestionAnswer
 from front.DialogEditProfileGranulo import DialogEditProfileGranulo
 from front.DialogDelete import DialogDelete
 from front.TableModel import TableModel
@@ -29,11 +30,18 @@ class ProfileTab(Tab):
         self.profileList = QListWidget()
         self.setProfileList()        
         self.profileList.currentTextChanged.connect(self.profileChoiceChanged)
+        self.profileList.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.profileList.customContextMenuRequested.connect(self.contextMenuOnList)        
+        
         self.layoutList.addWidget(self.profileList)
         self.newProfileButton = QPushButton(" NEW")
         self.newProfileButton.setIcon(QIcon(self.getResource("images\\add.png")))
         self.newProfileButton.released.connect(self.newProfileButtonReleased)
         self.layoutList.addWidget(self.newProfileButton)
+        self.renameWidget = QPushButton(" RENAME")
+        self.renameWidget.setIcon(QIcon(self.getResource("images\\rename.png")))
+        self.renameWidget.released.connect(self.renameButtonReleased)
+        self.layoutList.addWidget(self.renameWidget)
         self.editProfileButton = QPushButton(" EDIT")
         self.editing = False
         self.editProfileButton.setIcon(QIcon(self.getResource("images\\edit.png")))
@@ -47,10 +55,11 @@ class ProfileTab(Tab):
         self.deleteProfileButton.setIcon(QIcon(self.getResource("images\\trash.png")))
         self.deleteProfileButton.released.connect(self.deleteProfileButtonReleased)
         self.layoutList.addWidget(self.deleteProfileButton)
+        
 
         self.tableLayout = QVBoxLayout()
         self.table = QTableView()
-        self.table.setFont(QFont('Arial font', 10))
+        self.table.setFont(QFont('Arial font', 8))
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.contextMenuOnTable)
         header = self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -112,16 +121,42 @@ class ProfileTab(Tab):
     def contextMenuOnTable(self, pos):
         context = QMenu(self)
         if self.editing:
+            paste = QAction("Coller", self.table)
             addUpperLine = QAction("Insérer une ligne au-dessus", self.table)
             addLowerLine = QAction("Insérer une ligne en-dessous", self.table)
             deleteLine = QAction("Supprimer cette ligne", self.table)
+            paste.triggered.connect(self.model.paste(self.table.indexAt(pos)))
             addUpperLine.triggered.connect(self.model.addUpperLineForConnection(self.table.indexAt(pos)))
             addLowerLine.triggered.connect(self.model.addLowerLineForConnection(self.table.indexAt(pos)))
             deleteLine.triggered.connect(self.model.deleteLineForConnection(self.table.indexAt(pos)))
+            context.addAction(paste)
             context.addAction(addUpperLine)
             context.addAction(addLowerLine)
             context.addAction(deleteLine)
             context.exec(self.table.mapToGlobal(pos))
+
+    def contextMenuOnList(self, pos):
+        context = QMenu(self)
+        item = self.profileList.itemAt(pos)
+        if item != None:
+            self.getProject().setProfileSelected(item.text())
+            rename = QAction("Renommer", self.profileList)
+            edit = QAction("Editer", self.profileList)
+            copy = QAction("Copier", self.profileList)
+            delete = QAction("Supprimer", self.profileList)
+            rename.triggered.connect(self.renameButtonReleased)
+            edit.triggered.connect(self.editProfileButtonReleased)
+            copy.triggered.connect(self.copyProfileButtonReleased)
+            delete.triggered.connect(self.deleteProfileButtonReleased)
+            context.addAction(rename)
+            context.addAction(edit)
+            context.addAction(copy)
+            context.addAction(delete)
+        else:
+            newProfile = QAction("Nouveau profil", self.profileList)
+            newProfile.triggered.connect(self.newProfileButtonReleased)
+            context.addAction(newProfile)
+        context.exec(self.profileList.mapToGlobal(pos))
 
     def editGranuloButtonReleased(self):
         p = self.getProject().profileSelected
@@ -144,6 +179,25 @@ class ProfileTab(Tab):
             return
         pass
 
+    def renameButtonReleased(self):
+        p = self.getProject().profileSelected
+        if p == None:
+            return
+        dlg = DialogQuestionAnswer(self, f"Choississez un nouveau nom pour le profil {p.name}")
+        if dlg.exec():
+            newName = dlg.answer
+            if newName.split() == []:
+                QMessageBox.critical(self, "Nom invalide", "Le nom choisi est invalide")
+                return
+            if newName == p.name:
+                QMessageBox.information(self, "Nom identique", "Le nom est inchangé")
+                return
+            if newName in self.getProject().getProfileNameList():
+                QMessageBox.critical(self, "Nom invalide", "Le nom choisi est déjà pris par un autre profil")
+                return
+            p.name = newName
+            self.setProfileList()
+
     def editProfileButtonReleased(self):
         p = self.getProject().profileSelected
         if p == None:
@@ -157,6 +211,7 @@ class ProfileTab(Tab):
             self.editProfileButton.setText(" EDIT")
             self.profileList.setEnabled(True)
             self.newProfileButton.setEnabled(True)
+            self.renameWidget.setEnabled(True)
             self.copyProfileButton.setEnabled(True)
             self.deleteProfileButton.setEnabled(True)
             self.editGranuloButton.setEnabled(True)
@@ -167,6 +222,7 @@ class ProfileTab(Tab):
             self.profileList.setEnabled(False)
             self.newProfileButton.setEnabled(False)
             self.copyProfileButton.setEnabled(False)
+            self.renameWidget.setEnabled(False)
             self.deleteProfileButton.setEnabled(False)
             self.editGranuloButton.setEnabled(False)
             self.disableOtherTabs()

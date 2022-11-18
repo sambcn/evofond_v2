@@ -10,6 +10,7 @@ from front.TableModel import TableModel
 from front.MplCanvas import MplCanvas, NavigationToolbar
 from front.DialogNewHydrogram import DialogNewHydrogram
 from front.DialogDelete import DialogDelete
+from front.DialogQuestionAnswer import DialogQuestionAnswer
 
 class HydrogramTab(Tab):
     
@@ -21,6 +22,8 @@ class HydrogramTab(Tab):
         self.setHydrogramList()        
         self.hydrogramList.currentTextChanged.connect(self.hydrogramChoiceChanged)
         self.layoutList.addWidget(self.hydrogramList)
+        self.hydrogramList.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.hydrogramList.customContextMenuRequested.connect(self.contextMenuOnList)
        
         self.binWidget = QPushButton(" DELETE")
         self.binWidget.setIcon(QIcon(self.getResource("images\\trash.png")))
@@ -28,17 +31,25 @@ class HydrogramTab(Tab):
         self.copyWidget = QPushButton(" COPY")
         self.copyWidget.setIcon(QIcon(self.getResource("images\\copy.png")))
         self.copyWidget.released.connect(self.copyButtonReleased)
+        self.renameWidget = QPushButton(" RENAME")
+        self.renameWidget.setIcon(QIcon(self.getResource("images\\rename.png")))
+        self.renameWidget.released.connect(self.renameButtonReleased)
         self.editWidget = QPushButton(" EDIT")
         self.editWidget.setIcon(QIcon(self.getResource("images\\edit.png")))
         self.editWidget.released.connect(self.editButtonReleased)
+        self.propertiesWidget = QPushButton(" PROPERTIES")
+        self.propertiesWidget.setIcon(QIcon(self.getResource("images\\properties.png")))
+        self.propertiesWidget.released.connect(self.propertiesButtonReleased)
         self.editing = False
         self.newHydrogramButton = QPushButton(" NEW")
         self.newHydrogramButton.setIcon(QIcon(self.getResource("images\\add.png")))
         self.newHydrogramButton.released.connect(self.newHydrogramButtonReleased)
         self.layoutList.addWidget(self.newHydrogramButton)
+        self.layoutList.addWidget(self.renameWidget)
         self.layoutList.addWidget(self.editWidget)
         self.layoutList.addWidget(self.copyWidget)
         self.layoutList.addWidget(self.binWidget)
+        self.layoutList.addWidget(self.propertiesWidget)
 
         self.hydrogramData = QTableView()
         self.hydrogramData.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -62,15 +73,45 @@ class HydrogramTab(Tab):
         self.layout.addLayout(layoutInter)
         self.layout.addLayout(self.layoutPlot)
     
+    def contextMenuOnList(self, pos):
+        context = QMenu(self)
+        item = self.hydrogramList.itemAt(pos)
+        if item != None:
+            self.getProject().setHydrogramSelected(item.text())
+            rename = QAction("Renommer", self.hydrogramList)
+            edit = QAction("Editer", self.hydrogramList)
+            copy = QAction("Copier", self.hydrogramList)
+            delete = QAction("Supprimer", self.hydrogramList)
+            properties = QAction("Propriétés", self.hydrogramList)
+            rename.triggered.connect(self.renameButtonReleased)
+            edit.triggered.connect(self.editButtonReleased)
+            copy.triggered.connect(self.copyButtonReleased)
+            delete.triggered.connect(self.deleteButtonReleased)
+            properties.triggered.connect(self.propertiesButtonReleased)
+            context.addAction(rename)
+            context.addAction(edit)
+            context.addAction(copy)
+            context.addAction(delete)
+            context.addAction(properties)
+        else:
+            newHydrogram = QAction("Nouveau hydrogramme", self.hydrogramList)
+            newHydrogram.triggered.connect(self.newHydrogramButtonReleased)
+            context.addAction(newHydrogram)
+        context.exec(self.hydrogramList.mapToGlobal(pos))
+
+
     def contextMenuOnTable(self, pos):
         context = QMenu(self)
         if self.editing:
+            paste = QAction("Coller", self.hydrogramData)
             addUpperLine = QAction("Insérer une ligne au-dessus", self.hydrogramData)
             addLowerLine = QAction("Insérer une ligne en-dessous", self.hydrogramData)
             deleteLine = QAction("Supprimer cette ligne", self.hydrogramData)
+            paste.triggered.connect(self.model.paste(self.hydrogramData.indexAt(pos)))
             addUpperLine.triggered.connect(self.model.addUpperLineForConnection(self.hydrogramData.indexAt(pos)))
             addLowerLine.triggered.connect(self.model.addLowerLineForConnection(self.hydrogramData.indexAt(pos)))
             deleteLine.triggered.connect(self.model.deleteLineForConnection(self.hydrogramData.indexAt(pos)))
+            context.addAction(paste)
             context.addAction(addUpperLine)
             context.addAction(addLowerLine)
             context.addAction(deleteLine)
@@ -102,6 +143,8 @@ class HydrogramTab(Tab):
             self.newHydrogramButton.setEnabled(True)
             self.copyWidget.setEnabled(True)
             self.binWidget.setEnabled(True)
+            self.renameWidget.setEnabled(True)
+            self.propertiesWidget.setEnabled(True)
             self.enableOtherTabs()
         else:
             self.editWidget.setIcon(QIcon(self.getResource("images\\edit.png")))
@@ -110,9 +153,31 @@ class HydrogramTab(Tab):
             self.newHydrogramButton.setEnabled(False)
             self.copyWidget.setEnabled(False)
             self.binWidget.setEnabled(False)
+            self.renameWidget.setEnabled(False)
+            self.propertiesWidget.setEnabled(False)
             self.disableOtherTabs()
         self.editing = not(self.editing)
         self.model.changeEditionMode()
+        return
+
+    def renameButtonReleased(self):
+        h = self.getProject().hydrogramSelected
+        if h == None:
+            return
+        dlg = DialogQuestionAnswer(self, f"Choississez un nouveau nom pour l'hydrogramme {h.name}")
+        if dlg.exec():
+            newName = dlg.answer
+            if newName.split() == []:
+                QMessageBox.critical(self, "Nom invalide", "Le nom choisi est invalide")
+                return
+            if newName == h.name:
+                QMessageBox.information(self, "Nom identique", "Le nom est inchangé")
+                return
+            if newName in self.getProject().getHydrogramNameList():
+                QMessageBox.critical(self, "Nom invalide", "Le nom choisi est déjà pris par un autre hydrogramme")
+                return
+            h.name = newName
+            self.setHydrogramList()
         return
 
     def deleteButtonReleased(self):
@@ -139,6 +204,12 @@ class HydrogramTab(Tab):
         item = QListWidgetItem(hCopy.name)
         self.hydrogramList.addItem(item)
         return
+
+    def propertiesButtonReleased(self):
+        h = self.getProject().hydrogramSelected
+        if h == None:
+            return
+        QMessageBox.information(self, f"propriétés de {h.name}", h.properties)
 
     def hydrogramChoiceChanged(self, name):
         self.getProject().setHydrogramSelected(name)

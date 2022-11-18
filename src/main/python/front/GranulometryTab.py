@@ -25,16 +25,15 @@ class GranulometryTab(Tab):
         self.newGranuloButton = QPushButton(" NEW")
         self.newGranuloButton.setIcon(QIcon(self.getResource("images\\add.png")))
         self.newGranuloButton.released.connect(self.newGranuloButtonReleased)
+        self.granuloListLayout.addWidget(self.newGranuloButton)
         self.deleteGranuloButton = QPushButton(" DELETE")
         self.deleteGranuloButton.setIcon(QIcon(self.getResource("images\\trash.png")))
         self.deleteGranuloButton.released.connect(self.deleteGranuloButtonReleased)
-        self.copyGranuloButton = QPushButton(" COPY")
-        self.copyGranuloButton.setIcon(QIcon(self.getResource("images\\copy.png")))
-        self.copyGranuloButton.released.connect(self.copyGranuloButtonReleased)
-
-        self.granuloListLayout.addWidget(self.newGranuloButton)
         self.granuloListLayout.addWidget(self.deleteGranuloButton)
-        self.granuloListLayout.addWidget(self.copyGranuloButton)
+        # self.copyGranuloButton = QPushButton(" COPY")
+        # self.copyGranuloButton.setIcon(QIcon(self.getResource("images\\copy.png")))
+        # self.copyGranuloButton.released.connect(self.copyGranuloButtonReleased)
+        # self.granuloListLayout.addWidget(self.copyGranuloButton)
 
         self.table = QTableView()
         self.model = GranuloTableModel(self)
@@ -72,21 +71,21 @@ class GranulometryTab(Tab):
             self.model.refreshData()
         return
 
-    def copyGranuloButtonReleased(self):
-        g = self.getProject().granulometrySelected
-        if g == None:
-            return
-        newName = g.name + " (1)"
-        i = 1
-        while newName in self.getProject().getGranulometryNameList():
-            i += 1
-            newName = g.name + f" ({i})"
-        gCopy = g.copy(newName)
-        self.getProject().addGranulometry(gCopy)
-        item = QListWidgetItem(gCopy.name)
-        self.granuloList.addItem(item)
-        self.model.refreshData()
-        return
+    # def copyGranuloButtonReleased(self):
+    #     g = self.getProject().granulometrySelected
+    #     if g == None:
+    #         return
+    #     newName = g.name + " (1)"
+    #     i = 1
+    #     while newName in self.getProject().getGranulometryNameList():
+    #         i += 1
+    #         newName = g.name + f" ({i})"
+    #     gCopy = g.copy(newName)
+    #     self.getProject().addGranulometry(gCopy)
+    #     item = QListWidgetItem(gCopy.name)
+    #     self.granuloList.addItem(item)
+    #     self.model.refreshData()
+    #     return
         
     def setGranuloList(self):
         self.granuloList.clear()

@@ -277,8 +277,9 @@ class Profile():
         t_history = [t] # list of the t time of each step of the commputation
         dt_history = [] # list of the time steps used at each iteration
         n = self.get_nb_section()
+        tf = t_hydrogram[-1]
 
-        # stored_volume_start = self.get_stored_volume() # stored volume of sediment at the start of the event 
+        stored_volume_start = self.get_stored_volume() # stored volume of sediment at the start of the event 
         initial_profile = self.copy()
         method_set = {"Euler", "ImprovedEuler", "RungeKutta"}
         if not(method in method_set):
@@ -296,19 +297,21 @@ class Profile():
         #     one_step_volume_difference = []
 
         # next_t_print = 0
-        while t <= t_hydrogram[-1]:
+        while t <= tf:
             
             ###
             frontBuffer.updateProgressBar((t/t_hydrogram[-1])*100)
-            frontBuffer.updateModelSimulationLabel(time()-start_computation)
+            currentTime = time()-start_computation
+            expectedTime = currentTime * tf / t if t != 0 else None
+            frontBuffer.updateModelSimulationLabel(currentTime, expectedTime)
             frontBuffer.processEvents()
             if frontBuffer.stopSimulation:
                 return
             ###
             
             Q = np.interp(t, t_hydrogram, hydrogram)
-            Q_history.append(Q)
             Q_list = [Q for _ in range(n)]
+            Q_history.append(Q_list)
             yc_history.append(self.get_yc_list(Q_list))
             # yn_history.append(self.get_yn_list(Q_list, friction_law=friction_law if friction_law != None else "Ferguson"))
             b_history.append([s.get_b() for s in self.get_section_list()])
@@ -363,7 +366,7 @@ class Profile():
         try:       
             Q = np.interp(t, t_hydrogram, hydrogram)
             Q_list = [Q for _ in range(n)]
-            Q_history.append(Q)
+            Q_history.append(Q_list)
             y_matrix.append(self.get_yc_list(Q_list) if critical else self.compute_depth(Q_list, method=method, friction_law=friction_law, upstream_condition=upstream_condition, downstream_condition=downstream_condition))
             h_matrix.append([s.get_H(Q, y_matrix[-1][i]) for i, s in enumerate(self.get_section_list())])
             yc_history.append(self.get_yc_list(Q_list))
@@ -372,6 +375,7 @@ class Profile():
         except Exception:
             pass
         stored_volume_end = self.get_stored_volume()
+        stored_volume = stored_volume_end - stored_volume_start
         end_computation = time()
         frontBuffer.updateProgressBar(100)
         frontBuffer.updateModelSimulationLabel(end_computation-start_computation)
@@ -506,6 +510,9 @@ class Profile():
         result["critical_depth"] = yc_history
         # result["normal_depth"] = yn_history
         result["width"] = b_history
+        result["volume_in"] = V_in
+        result["volume_out"] = V_out
+        result["volume_stored"] = stored_volume
         
         return result
 

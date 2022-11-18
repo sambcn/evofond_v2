@@ -1,7 +1,7 @@
 from ctypes import alignment
 from PyQt5.QtWidgets import (
     QPushButton, QListWidget, QVBoxLayout, QComboBox, QLabel, QListWidgetItem, QAbstractItemView, QGridLayout, QSlider, QWidget, QHBoxLayout,
-    QMessageBox
+    QMessageBox, QFileDialog, QApplication
 )
 from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import Qt
@@ -11,23 +11,41 @@ from front.MplCanvas import MplCanvas, NavigationToolbar
 from frontToBack import simulateModel
 from front.DialogNewSimulation import DialogNewSimulation
 from front.DialogExportData import DialogExportData
+from utils import time_to_string
+
+import json
+import time
+import math
 
 class ResultsTab(Tab):
     
     def __init__(self, tabBar):
         super().__init__(tabBar, "Résultats", tabBar.getResource("images\\results.png"))
 
+        self.resultList = []
+
         self.listLayout = QVBoxLayout()
-        self.resultList = QListWidget()
-        self.listLayout.addWidget(self.resultList)
-        self.resultList.currentTextChanged.connect(self.resultChoiceChanged)
+        self.resultQList = QListWidget()
+        self.listLayout.addWidget(self.resultQList)
+        self.resultQList.currentTextChanged.connect(self.resultChoiceChanged)
         self.setResultList()
 
+        self.saveResultButton = QPushButton(" SAVE")
+        self.saveResultButton.setIcon(QIcon(self.getResource("images\\save.png")))
+        self.saveResultButton.released.connect(self.saveResultButtonReleased)
+        self.listLayout.addWidget(self.saveResultButton)
+        self.loadResultButton = QPushButton(" LOAD")
+        self.loadResultButton.setIcon(QIcon(self.getResource("images\\load.png")))
+        self.loadResultButton.released.connect(self.loadResultButtonReleased)
+        self.listLayout.addWidget(self.loadResultButton)
         self.deleteResultButton = QPushButton(" DELETE")
         self.deleteResultButton.setIcon(QIcon(self.getResource("images\\trash.png")))
         self.deleteResultButton.released.connect(self.deleteResultButtonReleased)
         self.listLayout.addWidget(self.deleteResultButton)
-
+        self.propertiesWidget = QPushButton(" PROPERTIES")
+        self.propertiesWidget.setIcon(QIcon(self.getResource("images\\properties.png")))
+        self.propertiesWidget.released.connect(self.propertiesButtonReleased)
+        self.listLayout.addWidget(self.propertiesWidget)
         self.paramLayout = QVBoxLayout()
 
         self.newSimulationButton = QPushButton(" Nouvelle simulation")
@@ -69,6 +87,8 @@ class ResultsTab(Tab):
         self.rescaleButton.setIcon(QIcon(self.getResource("images\\refresh.png")))
         self.rescaleButton.released.connect(self.rescale)
         self.plotLayout.addWidget(self.rescaleButton)
+        self.volumeLabel = QLabel("")
+        self.plotLayout.addWidget(self.volumeLabel)
         self.sc = MplCanvas()
         self.plotLayout.addWidget(self.sc, stretch=100)
         self.toolbar = NavigationToolbar(self.sc, self)
@@ -78,25 +98,137 @@ class ResultsTab(Tab):
         self.layout.addLayout(self.listLayout)
         self.layout.addLayout(self.paramLayout)
         self.layout.addLayout(self.plotLayout, stretch=100)
+
+    def getResult(self, name):
+        for r in self.resultList:
+            if r["name"] == name:
+                return r
+        return None
+        
+    def getResultNameList(self):
+        return [r["name"] for r in self.resultList]        
+
+    def addResult(self, result):
+        self.resultList.append(result)
+        item = QListWidgetItem(result["name"])
+        self.resultQList.addItem(item)
+        self.resultQList.setCurrentItem(item)
+
+    def deleteResult(self, rName):
+        for i, r in enumerate(self.resultList):
+            if r["name"] == rName:
+                self.resultList.pop(i)
+                return
+        return
         
     def newSimulation(self):
         dlg = DialogNewSimulation(parent=self)
         dlg.show()
         self.newSimulationButton.setEnabled(False)
+        self.loadResultButton.setEnabled(False)
+
+    def saveResultButtonReleased(self):
+        if self.currentResult == None:
+            return
+        dlg = QFileDialog(self)
+        dlg.setFileMode(QFileDialog.AnyFile)
+        dlg.setAcceptMode(QFileDialog.AcceptSave)
+        dlg.setNameFilter("*.json")
+        dlg.setDefaultSuffix(".json")
+        if dlg.exec():
+            f = open(dlg.selectedFiles()[-1], 'w')
+            waitingWindow = QMessageBox(self)
+            waitingWindow.setIcon(QMessageBox.Information)
+            waitingWindow.setWindowTitle("Sauvegarde en cours, ne quittez pas...")
+            # waitingWindow.setText("Sauvegarde en cours, ne quittez pas...")
+            waitingWindow.setAttribute(Qt.WA_DeleteOnClose)
+            # waitingWindow.setStandardButtons(QMessageBox.NoButton)
+            waitingWindow.setWindowFlag(Qt.WindowCloseButtonHint, False)
+            waitingWindow.show()            
+            json.dump(self.currentResult, f)
+            waitingWindow.close()            
+            f.close()
+            QMessageBox.information(self, "Résultat sauvegardé", "Le résultat a été sauvegardé avec succès !")
+        return
+
+    def loadResultButtonReleased(self):
+        dlg = QFileDialog(self)
+        dlg.setFileMode(QFileDialog.ExistingFile)
+        dlg.setAcceptMode(QFileDialog.AcceptOpen)
+        dlg.setNameFilter("*.json")
+        if dlg.exec():
+            f = open(dlg.selectedFiles()[-1], 'r')
+            waitingWindow = QMessageBox(self)
+            waitingWindow.setIcon(QMessageBox.Information)
+            waitingWindow.setWindowTitle("Chargement du fichier en cours, ne quittez pas...")
+            waitingWindow.setAttribute(Qt.WA_DeleteOnClose)
+            waitingWindow.setWindowFlag(Qt.WindowCloseButtonHint, False)
+            waitingWindow.show()
+            result = json.load(f)
+            waitingWindow.setWindowTitle("Vérification du format en cours, ne quittez pas...") 
+            f.close
+            if not(self.checkResultFormat(result)):
+                waitingWindow.close()
+                return
+            waitingWindow.close()
+            self.addResult(result)
+            self.currentResult = result
+
+    def propertiesButtonReleased(self):
+        if self.currentResult == None:
+            return
+        QMessageBox.information(self, f"propriétés de {self.currentResult['name']}", self.currentResult['model'])
+
+    def checkResultFormat(self, result):
+        if type(result) != dict:
+            return False
+        keys = result.keys()
+        neededKeys = ["name", "abscissa", "water_depth", "bottom_height", "minimal_bottom_height", "time", "energy", "water_discharge", "width"]
+        for neededKey in neededKeys:
+            if not(neededKey in keys):
+                QMessageBox.critical(self, "Fichier résultat corrompu", "Le fichier résultat a un format différent du fichier attendu. Impossible de l'ouvrir.")
+                return False
+        if result["name"] in self.getResultNameList():
+            QMessageBox.critical(self, "nom de résultat déjà existant", f"Le nom du fichier résultat est le même que {result['name']}, vous ne pouvez pas importer deux projets de même nom.")
+            return False
+        lenX = len(result["abscissa"])
+        lenT = len(result["time"])
+        _2Dvariables = ["water_depth", "bottom_height", "energy", "width", "water_discharge"]
+        _spatialVariables = ["minimal_bottom_height"]
+        _timeVariables = []
+        for key in _2Dvariables:
+            data = result[key]
+            if len(data) != lenT:
+                QMessageBox.critical(self, "Fichier résultat corrompu", "Le fichier résultat a un format différent du fichier attendu. Impossible de l'ouvrir.")
+                return False
+            for di in data:
+                if len(di) != lenX:
+                    QMessageBox.critical(self, "Fichier résultat corrompu", "Le fichier résultat a un format différent du fichier attendu. Impossible de l'ouvrir.")
+                    return False
+        for key in _spatialVariables:
+            if len(result[key]) != lenX:
+                QMessageBox.critical(self, "Fichier résultat corrompu", "Le fichier résultat a un format différent du fichier attendu. Impossible de l'ouvrir.")
+                return False
+        for key in _timeVariables:
+            if len(result[key]) != lenT:
+                QMessageBox.critical(self, "Fichier résultat corrompu", "Le fichier résultat a un format différent du fichier attendu. Impossible de l'ouvrir.")
+                return False
+        return True
 
     def deleteResultButtonReleased(self):
-        self.getProject().deleteResult(self.resultList.currentItem().text())
-        self.resultList.takeItem(self.resultList.currentRow())
-        self.currentResult = self.getProject().getResult(s)
+        self.deleteResult(self.resultQList.currentItem().text())
+        self.resultQList.takeItem(self.resultQList.currentRow())
+        self.currentResult = self.getResult(self.resultQList.currentItem().text()) if self.resultQList.currentItem() != None else None
 
     def resultChoiceChanged(self, s):
-        self.currentResult = self.getProject().getResult(s)
+        self.currentResult = self.getResult(s)
+        self.setVolumeInfo()
         self.setSlider()
 
     def setResultList(self):
         self.currentResult = None
-        self.resultList.clear()
-        self.resultList.addItems(self.getProject().getResultNameList())
+        self.resultQList.clear()
+        self.resultQList.addItems(self.getResultNameList())
 
     def refresh(self):
         self.setResultList()
@@ -132,6 +264,12 @@ class ResultsTab(Tab):
         self.varList3.addItem("b [m]\n (largeur du fond)")
         self.varList3.addItem("z-z0 [m]\n (variation du fond)")
 
+    def setVolumeInfo(self):
+        vIn = self.currentResult["volume_in"]
+        vOut = self.currentResult["volume_out"]
+        vStored = self.currentResult["volume_stored"]
+        self.volumeLabel.setText(f"Volume entrant : {vIn:.2f}m3\nVolume sortant : {vOut:.2f}m3\nVolume stocké : {vStored:.2f}m3\nSomme : {(vIn - vOut - vStored):.2f}m3\n")
+
     def setSlider(self):
         if self.currentResult == None:
             return
@@ -153,13 +291,13 @@ class ResultsTab(Tab):
         self.sc.draw()
     
     def plotData(self):
-
         if self.currentResult == None:
             return
         
         a = self.sc.axes
         for twinAx in a.get_shared_x_axes().get_siblings(a):
             twinAx.lines.clear()
+            twinAx.collections.clear()
             if twinAx != a:
                 twinAx.remove()
         a.set_prop_cycle(None)
@@ -171,12 +309,12 @@ class ResultsTab(Tab):
 
         i = self.slider.value()
         if self.varList1.currentRow() == 0:
-            self.sliderLabel.setText(f"time = {self.currentResult['time'][i]:.3f}s")
+            self.sliderLabel.setText(f"time = {time_to_string(self.currentResult['time'][i], decimals=2)}")
             x = self.currentResult["abscissa"]
             couple = [(i, j) for j in range(len(x))]
             xLabel = "x (m)"
         elif self.varList1.currentRow() == 1:
-            self.sliderLabel.setText(f"abscissa = {self.currentResult['abscissa'][i]:.3f}m")
+            self.sliderLabel.setText(f"abscissa = {self.currentResult['abscissa'][i]:.2f}m")
             x = self.currentResult["time"]
             couple = [(j, i) for j in range(len(x))]
             xLabel = "t (s)"
@@ -207,7 +345,7 @@ class ResultsTab(Tab):
             if y1Label != "":
                 y1Label += " - " 
             y1Label += label
-        if 0 in y1IndexList and 2 in y1IndexList:
+        if self.varList1.currentRow() == 0 and 0 in y1IndexList and 2 in y1IndexList:
             a.fill_between(x, z, h, color="cyan")
         if 3 in y1IndexList:
             zmin  = [self.currentResult["minimal_bottom_height"][c[1]] for c in couple]

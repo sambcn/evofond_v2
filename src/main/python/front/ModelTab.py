@@ -1,7 +1,7 @@
 from ast import If
 from ctypes import alignment
 from PyQt5.QtWidgets import (
-    QListWidget, QVBoxLayout, QLabel, QPushButton, QGridLayout, QComboBox, QWidget, QListWidgetItem, QCheckBox, QDoubleSpinBox
+    QListWidget, QVBoxLayout, QLabel, QPushButton, QGridLayout, QComboBox, QWidget, QListWidgetItem, QCheckBox, QDoubleSpinBox, QMessageBox
 )
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
@@ -9,6 +9,7 @@ from PyQt5.QtCore import Qt
 from front.Tab import Tab
 from front.DialogDelete import DialogDelete
 from front.DialogNewModel import DialogNewModel
+from front.DialogQuestionAnswer import DialogQuestionAnswer
 from utils import AVAILABLE_HYDRAULIC_MODEL, AVAILABLE_FRICTION_LAW, AVAILABLE_LIMITS, SEDIMENT_TRANSPORT_LAW_DICT
 
 class ModelTab(Tab):
@@ -27,6 +28,9 @@ class ModelTab(Tab):
         self.copyWidget = QPushButton(" COPY")
         self.copyWidget.setIcon(QIcon(self.getResource("images\\copy.png")))
         self.copyWidget.released.connect(self.copyButtonReleased)
+        self.renameWidget = QPushButton(" RENAME")
+        self.renameWidget.setIcon(QIcon(self.getResource("images\\rename.png")))
+        self.renameWidget.released.connect(self.renameButtonReleased)        
         self.addWidget = QPushButton(" NEW")
         self.addWidget.setIcon(QIcon(self.getResource("images\\add.png")))
         self.addWidget.released.connect(self.newButtonReleased)
@@ -35,6 +39,7 @@ class ModelTab(Tab):
         self.listLayout.addWidget(self.modelList)
         self.listLayout.addWidget(self.addWidget)
         self.listLayout.addWidget(self.copyWidget)
+        self.listLayout.addWidget(self.renameWidget)
         self.listLayout.addWidget(self.binWidget)
 
         self.modelLayout = QGridLayout()
@@ -153,6 +158,26 @@ class ModelTab(Tab):
             self.getProject().deleteModel(m)
             self.modelList.takeItem(self.modelList.currentRow())
             self.setModelLayout(self.getProject().modelSelected)
+        return
+
+    def renameButtonReleased(self):
+        m = self.getProject().modelSelected
+        if m == None:
+            return
+        dlg = DialogQuestionAnswer(self, f"Choississez un nouveau nom pour le modèle {m.name}")
+        if dlg.exec():
+            newName = dlg.answer
+            if newName.split() == []:
+                QMessageBox.critical(self, "Nom invalide", "Le nom choisi est invalide")
+                return
+            if newName == m.name:
+                QMessageBox.information(self, "Nom identique", "Le nom est inchangé")
+                return
+            if newName in self.getProject().getModelNameList():
+                QMessageBox.critical(self, "Nom invalide", "Le nom choisi est déjà pris par un autre modèle")
+                return
+            m.name = newName
+            self.setModelList()
         return
 
     def copyButtonReleased(self):

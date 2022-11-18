@@ -24,7 +24,8 @@ def simulateModel(project, model, frontBuffer=None):
     if frontprofile.type == "Rectangular":
         for i in range(df.shape[0]):
             granuloName = frontprofile.getGranuloName(df.iloc[i][0])
-            granulometry = convertGranuloFromFrontToBack(project.getGranulometry(granuloName))
+            g = project.getGranulometry(granuloName)
+            granulometry = convertGranuloFromFrontToBack(g)
             
             ###
             #TODO : Error if granulometry = None (user didn't complete granulo form in profile tab)
@@ -74,4 +75,5 @@ def simulateModel(project, model, frontBuffer=None):
     # profile.compute_depth(Q[0], plot=True, friction_law=model.frictionLaw, upstream_condition=upstreamCondition, downstream_condition=downstreamCondition)
     # plt.show()
     # return None
-    return profile.compute_event(hydrogram=Q, t_hydrogram=t_hydro, law=law, sedimentogram=Qs, friction_law=model.frictionLaw, critical=(model.hydroModel==AVAILABLE_HYDRAULIC_MODEL[0]), upstream_condition=upstreamCondition, downstream_condition=downstreamCondition, plot=False, frontBuffer=frontBuffer)
+    result = profile.compute_event(hydrogram=Q, t_hydrogram=t_hydro, law=law, sedimentogram=Qs, friction_law=model.frictionLaw, critical=(model.hydroModel==AVAILABLE_HYDRAULIC_MODEL[0]), upstream_condition=upstreamCondition, downstream_condition=downstreamCondition, plot=False, frontBuffer=frontBuffer)
+    return result

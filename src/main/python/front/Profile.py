@@ -16,7 +16,7 @@ class Profile():
             if type == "Rectangular":
                 self.data = pd.DataFrame({"x [m] \n(abscisse)":[None], "z [m] \n(altitude)":[None], "z_min [m] \n(altitude minimale)":[None], 'b [m] \n(largeur)':[None]})
             elif type == "Trapezoidal":
-                self.data = pd.DataFrame({"x [m] \n(abscisse)":[None], "z [m] \n(altitude)":[None], "z_min [m] \n(altitude minimale)":[None], 'b0 [m] \n(largeur du fond)':[None], 'b0_min [m] \n(largeur minimale du fond)':[None], 'f_left [m/m] \n(fruit rive gauche)':[None], 'f_right [m/m] \n(fruit rive gauche)':[None]})
+                self.data = pd.DataFrame({"x [m] \n(abscisse)":[None], "z [m] \n(altitude)":[None], "z_min [m] \n(altitude minimale)":[None], 'b0 [m] \n(largeur du fond)':[None], 'b0_min [m] \n(largeur minimale\n du fond)':[None], 'f_left [m/m] \n(fruit rive gauche)':[None], 'f_right [m/m] \n(fruit rive droite)':[None]})
         else:
             self.data = data
         if not(isinstance(granulo, pd.DataFrame)):
