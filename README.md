@@ -25,7 +25,7 @@ If you get an error, use --debug option and launch the .exe through command line
 
 ### How do I use Evofond ?
 
-Please see documentation for this question :) 
+Please see documentation for this question (coming soon) :) 
 
 ### Other issues ?
 
