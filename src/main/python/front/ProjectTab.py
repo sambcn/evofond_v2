@@ -69,9 +69,11 @@ class ProjectTab(Tab):
         dlg.setNameFilter("*.evf")
         if dlg.exec():
             try:
-                f = open(dlg.selectedFiles()[-1], 'rb')
+                path = dlg.selectedFiles()[-1]
+                f = open(path, 'rb')
                 gc.disable()
                 self.currentProject = pkl.load(f)
+                self.currentProject.path = path
                 gc.enable()
                 f.close()
                 self.tabBar.refresh()

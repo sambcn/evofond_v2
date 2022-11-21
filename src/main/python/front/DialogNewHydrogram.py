@@ -81,6 +81,7 @@ class DialogNewHydrogram(QDialog):
         self.doubleBoxQmax.valueChanged.connect(self.lavabreQmaxChanged)
         self.doubleBoxQmax.setSuffix("   m3/s")
         self.doubleBoxQmax.setMinimum(0)
+        self.doubleBoxQmax.setMaximum(999.99)
         lavabreLayout1.addWidget(self.doubleBoxQmax, 2, 1)
         self.hydroArgs['Qmax'] = self.doubleBoxQmax.value()
         self.doubleBoxQmin = QDoubleSpinBox()

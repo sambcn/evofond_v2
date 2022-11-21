@@ -310,6 +310,27 @@ class Profile():
             ###
             
             Q = np.interp(t, t_hydrogram, hydrogram)
+            ### Q = 0 => nothing happens, we skip
+            if Q <= 10**(-3):
+                Q_history.append([0 for _ in range(n)])
+                yc_history.append([0 for _ in range(n)])
+                b_history.append([s.get_b() for s in self.get_section_list()])
+                y_matrix.append([0 for _ in range(n)])                
+                h_matrix.append([0 for _ in range(n)])     
+                z_matrix.append(z_matrix[-1])
+                Qs_history.append(0)           
+                if t != tf:
+                    t_hydrogram_index = 0
+                    while t_hydrogram[t_hydrogram_index] <= t:
+                        t_hydrogram_index += 1
+                    dt_history.append(t_hydrogram[t_hydrogram_index]-t)
+                    t = t_hydrogram[t_hydrogram_index]
+                    t_history.append(t)
+                    continue
+                else:
+                    break
+            ###
+
             Q_list = [Q for _ in range(n)]
             Q_history.append(Q_list)
             yc_history.append(self.get_yc_list(Q_list))
@@ -365,13 +386,22 @@ class Profile():
         frontBuffer.updateModelSimulationLabel(time()-start_computation)
         try:       
             Q = np.interp(t, t_hydrogram, hydrogram)
-            Q_list = [Q for _ in range(n)]
-            Q_history.append(Q_list)
-            y_matrix.append(self.get_yc_list(Q_list) if critical else self.compute_depth(Q_list, method=method, friction_law=friction_law, upstream_condition=upstream_condition, downstream_condition=downstream_condition))
-            h_matrix.append([s.get_H(Q, y_matrix[-1][i]) for i, s in enumerate(self.get_section_list())])
-            yc_history.append(self.get_yc_list(Q_list))
-            yn_history.append(self.get_yn_list(Q_list, friction_law=friction_law if friction_law != None else "Ferguson"))
-            b_history.append([s.get_b() for s in self.get_section_list()])
+            ###
+            if Q <= 10**(-3):
+                Q_history.append([0 for _ in range(n)])
+                yc_history.append([0 for _ in range(n)])
+                b_history.append([s.get_b() for s in self.get_section_list()])
+                y_matrix.append([0 for _ in range(n)])                
+                h_matrix.append([0 for _ in range(n)]) 
+            ###
+            else:
+                Q_list = [Q for _ in range(n)]
+                Q_history.append(Q_list)
+                y_matrix.append(self.get_yc_list(Q_list) if critical else self.compute_depth(Q_list, method=method, friction_law=friction_law, upstream_condition=upstream_condition, downstream_condition=downstream_condition))
+                h_matrix.append([s.get_H(Q, y_matrix[-1][i]) for i, s in enumerate(self.get_section_list())])
+                yc_history.append(self.get_yc_list(Q_list))
+                # yn_history.append(self.get_yn_list(Q_list, friction_law=friction_law if friction_law != None else "Ferguson"))
+                b_history.append([s.get_b() for s in self.get_section_list()])
         except Exception:
             pass
         stored_volume_end = self.get_stored_volume()
