@@ -34,69 +34,69 @@ class DialogNewGranulo(QDialog):
 
         self.gridLayout.addWidget(QLabel("dm = "), 0, 0)
         doubleBoxDm = QDoubleSpinBox()
-        doubleBoxDm.setDecimals(4)
+        doubleBoxDm.setDecimals(2)
         doubleBoxDm.valueChanged.connect(self.dmChanged)
-        doubleBoxDm.setSuffix("   m")
+        doubleBoxDm.setSuffix("   cm")
         doubleBoxDm.setMinimum(0)
         doubleBoxDm.setMaximum(999999.99)
         self.gridLayout.addWidget(doubleBoxDm, 0, 1)
-        self.argsGranulo['dm'] = doubleBoxDm.value()
+        self.argsGranulo['dm'] = doubleBoxDm.value() / 100
 
         self.gridLayout.addWidget(QLabel("d30 = "), 1, 0)
         doubleBoxDm = QDoubleSpinBox()
-        doubleBoxDm.setDecimals(4)
+        doubleBoxDm.setDecimals(2)
         doubleBoxDm.valueChanged.connect(self.d30Changed)
-        doubleBoxDm.setSuffix("   m")
+        doubleBoxDm.setSuffix("   cm")
         doubleBoxDm.setMinimum(0)
         doubleBoxDm.setMaximum(999999.99)
         self.gridLayout.addWidget(doubleBoxDm, 1, 1)
-        self.argsGranulo['d30'] = doubleBoxDm.value()
+        self.argsGranulo['d30'] = doubleBoxDm.value() / 100
 
         self.gridLayout.addWidget(QLabel("d50 = "), 2, 0)
         doubleBoxDm = QDoubleSpinBox()
-        doubleBoxDm.setDecimals(4)
+        doubleBoxDm.setDecimals(2)
         doubleBoxDm.valueChanged.connect(self.d50Changed)
-        doubleBoxDm.setSuffix("   m")
+        doubleBoxDm.setSuffix("   cm")
         doubleBoxDm.setMinimum(0)
         doubleBoxDm.setMaximum(999999.99)
         self.gridLayout.addWidget(doubleBoxDm, 2, 1)
-        self.argsGranulo['d50'] = doubleBoxDm.value()
+        self.argsGranulo['d50'] = doubleBoxDm.value() / 100
 
         self.gridLayout.addWidget(QLabel("d90 = "), 3, 0)
         doubleBoxDm = QDoubleSpinBox()
-        doubleBoxDm.setDecimals(4)
+        doubleBoxDm.setDecimals(2)
         doubleBoxDm.valueChanged.connect(self.d90Changed)
-        doubleBoxDm.setSuffix("   m")
+        doubleBoxDm.setSuffix("   cm")
         doubleBoxDm.setMinimum(0)
         doubleBoxDm.setMaximum(999999.99)
         self.gridLayout.addWidget(doubleBoxDm, 3, 1)
-        self.argsGranulo['d90'] = doubleBoxDm.value()
+        self.argsGranulo['d90'] = doubleBoxDm.value() / 100
 
         self.gridLayout.addWidget(QLabel("d84tb = "), 4, 0)
         doubleBoxDm = QDoubleSpinBox()
-        doubleBoxDm.setDecimals(4)
+        doubleBoxDm.setDecimals(2)
         doubleBoxDm.valueChanged.connect(self.d84tbChanged)
-        doubleBoxDm.setSuffix("   m")
+        doubleBoxDm.setSuffix("   cm")
         doubleBoxDm.setMinimum(0)
         doubleBoxDm.setMaximum(999999.99)
         self.gridLayout.addWidget(doubleBoxDm, 4, 1)
-        self.argsGranulo['d84tb'] = doubleBoxDm.value()
+        self.argsGranulo['d84tb'] = doubleBoxDm.value() / 100
 
         self.gridLayout.addWidget(QLabel("d84bs = "), 5, 0)
         doubleBoxDm = QDoubleSpinBox()
-        doubleBoxDm.setDecimals(4)
+        doubleBoxDm.setDecimals(2)
         doubleBoxDm.valueChanged.connect(self.d84bsChanged)
-        doubleBoxDm.setSuffix("   m")
+        doubleBoxDm.setSuffix("   cm")
         doubleBoxDm.setMinimum(0)
         doubleBoxDm.setMaximum(999999.99)
         self.gridLayout.addWidget(doubleBoxDm, 5, 1)
-        self.argsGranulo['d84bs'] = doubleBoxDm.value()
+        self.argsGranulo['d84bs'] = doubleBoxDm.value() / 100
 
         self.gridLayout.addWidget(QLabel("Gr = "), 6, 0)
         doubleBoxDm = QDoubleSpinBox()
-        doubleBoxDm.setDecimals(4)
+        doubleBoxDm.setDecimals(2)
         doubleBoxDm.valueChanged.connect(self.grChanged)
-        doubleBoxDm.setSuffix("   m")
+        doubleBoxDm.setSuffix("    ")
         doubleBoxDm.setMinimum(0)
         doubleBoxDm.setMaximum(999999.99)
         self.gridLayout.addWidget(doubleBoxDm, 6, 1)
@@ -113,22 +113,22 @@ class DialogNewGranulo(QDialog):
         self.argsGranulo['name'] = s
 
     def dmChanged(self, x):
-        self.argsGranulo['dm'] = x
+        self.argsGranulo['dm'] = x / 100
     
     def d30Changed(self, x):
-        self.argsGranulo['d30'] = x
+        self.argsGranulo['d30'] = x / 100
     
     def d50Changed(self, x):
-        self.argsGranulo['d50'] = x
+        self.argsGranulo['d50'] = x / 100
     
     def d90Changed(self, x):
-        self.argsGranulo['d90'] = x
+        self.argsGranulo['d90'] = x / 100
     
     def d84tbChanged(self, x):
-        self.argsGranulo['d84tb'] = x
+        self.argsGranulo['d84tb'] = x / 100
     
     def d84bsChanged(self, x):
-        self.argsGranulo['d84bs'] = x
+        self.argsGranulo['d84bs'] = x / 100
     
     def grChanged(self, x):
         self.argsGranulo['Gr'] = x

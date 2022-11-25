@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
    QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QTableView, QListWidgetItem, QHeaderView, QMessageBox, QMenu, QAction,
-   QAbstractItemView
+   QCheckBox, QComboBox
 )
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
@@ -11,6 +11,8 @@ from front.MplCanvas import MplCanvas, NavigationToolbar
 from front.DialogNewSedimentogram import DialogNewSedimentogram
 from front.DialogDelete import DialogDelete
 from front.DialogQuestionAnswer import DialogQuestionAnswer
+
+from utils import getAccumulatedVolume
 
 class SedimentogramTab(Tab):
     
@@ -61,8 +63,16 @@ class SedimentogramTab(Tab):
         self.displayData()
 
         self.layoutPlot = QVBoxLayout()
+        self.plotHydrogramDataCheckbox = QCheckBox(" Afficher les données hydrauliques")
+        self.plotHydrogramDataCheckbox.stateChanged.connect(self.plotHydrogramDataCheckboxChecked)
+        self.hydrogramList = QComboBox()
+        self.setHydrogramList()
+        self.plotLabel = QLabel()
+        self.layoutPlot.addWidget(self.plotHydrogramDataCheckbox, alignment=Qt.AlignTop)
+        self.layoutPlot.addWidget(self.hydrogramList, alignment=Qt.AlignTop)
+        self.layoutPlot.addWidget(self.plotLabel, alignment=Qt.AlignTop)
         self.sc = MplCanvas()
-        self.layoutPlot.addWidget(self.sc)
+        self.layoutPlot.addWidget(self.sc, stretch=100)
         self.toolbar = NavigationToolbar(self.sc, self)
         self.layoutPlot.addWidget(self.toolbar)
         self.plotData()
@@ -101,6 +111,9 @@ class SedimentogramTab(Tab):
     
     def contextMenuOnTable(self, pos):
         context = QMenu(self)
+        copy = QAction("Copier", self.table)
+        copy.triggered.connect(self.model.copy)
+        context.addAction(copy)
         if self.editing:
             paste = QAction("Coller", self.sedimentogramData)
             addUpperLine = QAction("Insérer une ligne au-dessus", self.sedimentogramData)
@@ -114,7 +127,7 @@ class SedimentogramTab(Tab):
             context.addAction(addUpperLine)
             context.addAction(addLowerLine)
             context.addAction(deleteLine)
-            context.exec(self.sedimentogramData.mapToGlobal(pos))
+        context.exec(self.sedimentogramData.mapToGlobal(pos))
 
     def newSedimentogramButtonReleased(self):
         dlg = DialogNewSedimentogram(parent=self)
@@ -216,6 +229,13 @@ class SedimentogramTab(Tab):
         self.plotData()
         return
 
+    def plotHydrogramDataCheckboxChecked(self):
+        if self.plotHydrogramDataCheckbox.isChecked():
+            self.hydrogramList.setEnabled(True)
+        else:
+            self.hydrogramList.setEnabled(False)
+        self.plotData()
+
     def displayData(self):
         if self.getProject().sedimentogramSelected == None:
             self.model = None
@@ -225,18 +245,49 @@ class SedimentogramTab(Tab):
             self.sedimentogramData.setModel(self.model)
 
     def plotData(self):
+        self.plotLabel.setText("")
+        a = self.sc.axes
+        for twinAx in a.get_shared_x_axes().get_siblings(a):
+            twinAx.lines.clear()
+            twinAx.collections.clear()
+            l = twinAx.get_legend()
+            if l != None: 
+                l.remove()
+            if twinAx != a:
+                twinAx.remove()
+        a.set_prop_cycle(None)
+        lines = []
+
         if self.getProject().sedimentogramSelected == None:
+            self.sc.draw()
             return
         else:
             df = self.getProject().sedimentogramSelected.data
-        self.sc.axes.lines.clear()
-        self.sc.axes.set_prop_cycle(None)
+
         subdf = df[~(df[df.columns[0]].isnull()) & ~(df[df.columns[1]].isnull())]
-        self.sc.axes.plot(subdf[subdf.columns[0]], subdf[subdf.columns[1]], color="orange")
-        self.sc.axes.set_xlabel(subdf.columns[0])
-        self.sc.axes.set_ylabel(subdf.columns[1])
-        self.sc.axes.relim()
-        self.sc.axes.autoscale()
+        lines += a.plot(subdf[subdf.columns[0]], subdf[subdf.columns[1]], label="Débit", color="orange")
+        a.set_xlabel(subdf.columns[0])
+        a.set_ylabel(subdf.columns[1])
+        a.relim()
+        a.autoscale()
+
+        twinAx = a.twinx()
+        vAccumulated = getAccumulatedVolume(subdf[subdf.columns[0]], subdf[subdf.columns[1]])
+        hydroName = self.hydrogramList.currentText()
+        dfHydro = self.getProject().getHydrogram(hydroName).data
+        subdfHydro = dfHydro[~(dfHydro[dfHydro.columns[0]].isnull()) & ~(dfHydro[dfHydro.columns[1]].isnull())]
+        vWaterAccumulated = getAccumulatedVolume(subdfHydro[subdfHydro.columns[0]], subdfHydro[subdfHydro.columns[1]])
+
+        if self.plotHydrogramDataCheckbox.isChecked():
+            lines += twinAx.plot(subdfHydro[subdfHydro.columns[0]], subdfHydro[subdfHydro.columns[1]], label="Débit liquide", color="blue", linestyle="dashed")
+            twinAx.set_ylabel(subdfHydro.columns[1])
+        else:
+            lines += twinAx.plot(subdf[subdf.columns[0]], vAccumulated, label="Volume cumulé", color="orange", linestyle="dashdot")
+            twinAx.set_ylabel("Volume cumulé (m3)")
+        
+        if len(vAccumulated) > 0 and len(vWaterAccumulated) > 0:
+            self.plotLabel.setText(f"Volume solide cumulé : {vAccumulated[-1]:.3f}m3\nVolume liquide cumulé : {vWaterAccumulated[-1]:.3f}m3\nConcentration volumique (m3/m3) : {vAccumulated[-1]/vWaterAccumulated[-1]:.3f}")
+        a.legend(lines, [l.get_label() for l in lines])
         self.sc.draw()
         return
 
@@ -253,6 +304,12 @@ class SedimentogramTab(Tab):
             self.sedimentogramList.addItem(item)
         return
 
+    def setHydrogramList(self):
+        self.hydrogramList.setEnabled(self.plotHydrogramDataCheckbox.isChecked())
+        self.hydrogramList.clear()
+        self.hydrogramList.addItems(self.getProject().getHydrogramNameList())
+
     def refresh(self):
         self.setSedimentogramList()
+        self.setHydrogramList()
         return

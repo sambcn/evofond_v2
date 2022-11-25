@@ -142,7 +142,12 @@ class DialogNewSimulation(QDialog):
             self.stopSimulation = False
             self.currentModelIndex = i
             model = p.getModel(m)
-            result = simulateModel(p, model, self)
+            try:
+                result = simulateModel(p, model, self)
+            except ValueError as e:
+                self.updateModelSimulationLabel(text=str(e))
+                result = None
+
             self.stopButtonList[i].setEnabled(False)
             if result == None:
                 continue
@@ -161,8 +166,11 @@ class DialogNewSimulation(QDialog):
     def updateProgressBar(self, percentage):
         self.pBarList[self.currentModelIndex].setValue(percentage)
 
-    def updateModelSimulationLabel(self, time, expectedTime=None):
-        self.modelSimulationLabelList[self.currentModelIndex].setText(f"temps de calcul : {time_to_string(time)}\n{'temps total estimé : '+time_to_string(expectedTime, decimals=0) if expectedTime != None else ''}")
+    def updateModelSimulationLabel(self, time=None, expectedTime=None, text=None):
+        if text == None:
+            self.modelSimulationLabelList[self.currentModelIndex].setText(f"temps de calcul : {time_to_string(time)}\n{'temps total estimé : '+time_to_string(expectedTime, decimals=0) if expectedTime != None else ''}")
+        else:
+            self.modelSimulationLabelList[self.currentModelIndex].setText(text)
 
     def closeEvent(self, event):
         event.ignore()

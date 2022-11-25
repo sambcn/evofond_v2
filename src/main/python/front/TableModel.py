@@ -64,6 +64,9 @@ class TableModel(QAbstractTableModel):
             if orientation == Qt.Vertical:
                 return ""
 
+    def copy(self):
+        self._object.data.to_clipboard(index=False)
+
     def paste(self, index):
         def _paste():
             row = index.row()
@@ -107,4 +110,5 @@ class TableModel(QAbstractTableModel):
 
     def restore(self):
         self._object.data = self.backup
+        self.layoutChanged.emit()
         self.tab.plotData()

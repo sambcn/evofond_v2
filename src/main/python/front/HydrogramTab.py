@@ -12,6 +12,8 @@ from front.DialogNewHydrogram import DialogNewHydrogram
 from front.DialogDelete import DialogDelete
 from front.DialogQuestionAnswer import DialogQuestionAnswer
 
+from utils import getAccumulatedVolume
+
 class HydrogramTab(Tab):
     
     def __init__(self, tabBar):
@@ -61,8 +63,10 @@ class HydrogramTab(Tab):
         self.displayHydrogramData()
 
         self.layoutPlot = QVBoxLayout()
+        self.plotLabel = QLabel()
+        self.layoutPlot.addWidget(self.plotLabel, alignment=Qt.AlignTop)
         self.sc = MplCanvas()
-        self.layoutPlot.addWidget(self.sc)
+        self.layoutPlot.addWidget(self.sc, stretch=100)
         self.toolbar = NavigationToolbar(self.sc, self)
         self.layoutPlot.addWidget(self.toolbar)
         self.plotData()
@@ -102,6 +106,9 @@ class HydrogramTab(Tab):
 
     def contextMenuOnTable(self, pos):
         context = QMenu(self)
+        copy = QAction("Copier", self.table)
+        copy.triggered.connect(self.model.copy)
+        context.addAction(copy)
         if self.editing:
             paste = QAction("Coller", self.hydrogramData)
             addUpperLine = QAction("Insérer une ligne au-dessus", self.hydrogramData)
@@ -115,7 +122,7 @@ class HydrogramTab(Tab):
             context.addAction(addUpperLine)
             context.addAction(addLowerLine)
             context.addAction(deleteLine)
-            context.exec(self.hydrogramData.mapToGlobal(pos))
+        context.exec(self.hydrogramData.mapToGlobal(pos))
 
     def newHydrogramButtonReleased(self):
         dlg = DialogNewHydrogram(parent=self)
@@ -226,18 +233,40 @@ class HydrogramTab(Tab):
             self.hydrogramData.setModel(self.model)
 
     def plotData(self):
+        self.plotLabel.setText("")
+        a = self.sc.axes
+        for twinAx in a.get_shared_x_axes().get_siblings(a):
+            twinAx.lines.clear()
+            twinAx.collections.clear()
+            l = twinAx.get_legend()
+            if l != None: 
+                l.remove()
+            if twinAx != a:
+                twinAx.remove()
+        a.set_prop_cycle(None)
+        lines = []
+
         if self.getProject().hydrogramSelected == None:
+            self.sc.draw()
             return
         else:
             df = self.getProject().hydrogramSelected.data
-        self.sc.axes.lines.clear()
-        self.sc.axes.set_prop_cycle(None)
+
         subdf = df[~(df[df.columns[0]].isnull()) & ~(df[df.columns[1]].isnull())]
-        self.sc.axes.plot(subdf[subdf.columns[0]], subdf[subdf.columns[1]])
-        self.sc.axes.set_xlabel(subdf.columns[0])
-        self.sc.axes.set_ylabel(subdf.columns[1])
-        self.sc.axes.relim()
-        self.sc.axes.autoscale()
+        lines += a.plot(subdf[subdf.columns[0]], subdf[subdf.columns[1]], label="Débit", color="blue")
+        a.set_xlabel(subdf.columns[0])
+        a.set_ylabel(subdf.columns[1])
+        a.relim()
+        a.autoscale()
+
+        twinAx = a.twinx()
+        vAccumulated = getAccumulatedVolume(subdf[subdf.columns[0]], subdf[subdf.columns[1]])
+        lines += twinAx.plot(subdf[subdf.columns[0]], vAccumulated, label="Volume cumulé", color="blue", linestyle="dashdot")
+        twinAx.set_ylabel("Volume cumulé (m3)")
+
+        if len(vAccumulated) > 0:
+            self.plotLabel.setText(f"Volume liquide cumulé : {vAccumulated[-1]:.3f}m3")
+        a.legend(lines, [l.get_label() for l in lines])
         self.sc.draw()
         return
 

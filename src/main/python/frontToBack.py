@@ -1,7 +1,7 @@
 from back.profile import Profile
 from back.rectangularSection import RectangularSection
 from back.trapezoidalSection import TrapezoidalSection
-from utils import convertGranuloFromFrontToBack, PopupError, SEDIMENT_TRANSPORT_LAW_DICT, AVAILABLE_HYDRAULIC_MODEL, AVAILABLE_LIMITS
+from utils import convertGranuloFromFrontToBack, SEDIMENT_TRANSPORT_LAW_DICT, AVAILABLE_HYDRAULIC_MODEL, AVAILABLE_LIMITS
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,6 +18,8 @@ def simulateModel(project, model, frontBuffer=None):
         df = df[~(df[df.columns[i]].isnull())]
     df = df.sort_values(by=df.columns[0], ascending=False)
     x = df.iloc[:,0].values.tolist()
+    if x==[]:
+        raise ValueError(f"Profil vide, veuillez vérifier que la colonne des abscisses n'est pas vide et que les lignes sont complètement remplies")
     maxi = max(x)
     x = [maxi - xi for xi in x]
     listOfSection = []
@@ -25,11 +27,10 @@ def simulateModel(project, model, frontBuffer=None):
         for i in range(df.shape[0]):
             granuloName = frontprofile.getGranuloName(df.iloc[i][0])
             g = project.getGranulometry(granuloName)
+            if g == None:
+                raise ValueError(f"Pas de granulométrie renseigné pour x={df.iloc[i][0]}")
             granulometry = convertGranuloFromFrontToBack(g)
-            
-            ###
-            #TODO : Error if granulometry = None (user didn't complete granulo form in profile tab)
-            ###
+
 
             listOfSection.append(RectangularSection(x[i], df.iloc[i][1], df.iloc[i][3], df.iloc[i][2], granulometry=granulometry))
     elif frontprofile.type == "Trapezoidal":
@@ -54,7 +55,7 @@ def simulateModel(project, model, frontBuffer=None):
     t_sedimento = df.iloc[:,0].values.tolist()
     Qs = df.iloc[:,1].values.tolist()
     if t_hydro[0] < t_sedimento[0] or t_hydro[-1] > t_sedimento[-1]:
-        raise PopupError("Les instants de l'hydrogramme ne sont pas inclus dans ceux du sédimentogramme. \n\n Veuillez modifier cela pour que l'algorithme puisse connaître le débit solide à chaque instant de l'évènement hydraulique.")
+        raise ValueError("Les instants de l'hydrogramme ne sont pas inclus dans ceux du sédimentogramme. \n\n Veuillez modifier cela pour que l'algorithme puisse connaître le débit solide à chaque instant de l'évènement hydraulique.")
     Qs = np.interp(t_hydro, t_sedimento, Qs)
     law = SEDIMENT_TRANSPORT_LAW_DICT[model.sedimentTransportLaw]()
     

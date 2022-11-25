@@ -65,11 +65,11 @@ class DialogNewHydrogram(QDialog):
 
         self.doubleBoxDuration = QDoubleSpinBox()
         self.doubleBoxDuration.valueChanged.connect(self.lavabreDurationChanged)
-        self.doubleBoxDuration.setSuffix("   s")
+        self.doubleBoxDuration.setSuffix("   h")
         self.doubleBoxDuration.setMinimum(0)
         self.doubleBoxDuration.setMaximum(999999.99)
         lavabreLayout1.addWidget(self.doubleBoxDuration, 0, 1)
-        self.hydroArgs['d'] = self.doubleBoxDuration.value()
+        self.hydroArgs['d'] = self.doubleBoxDuration.value()*3600
         self.doubleBoxTimeStep = QDoubleSpinBox()
         self.doubleBoxTimeStep.valueChanged.connect(self.lavabreTimeStepChanged)
         self.doubleBoxTimeStep.setSuffix("   s")
@@ -92,11 +92,11 @@ class DialogNewHydrogram(QDialog):
         self.hydroArgs['Qmin'] = self.doubleBoxQmin.value()
         self.doubleBoxTmax = QDoubleSpinBox()
         self.doubleBoxTmax.valueChanged.connect(self.lavabreTmaxChanged)
-        self.doubleBoxTmax.setSuffix("   s")
+        self.doubleBoxTmax.setSuffix("   h")
         self.doubleBoxTmax.setMinimum(0)
         self.doubleBoxDuration.setMaximum(999999.99)
         lavabreLayout1.addWidget(self.doubleBoxTmax, 4, 1)
-        self.hydroArgs['tmax'] = self.doubleBoxTmax.value()
+        self.hydroArgs['tmax'] = self.doubleBoxTmax.value()*3600
         self.doubleBoxAlpha = QDoubleSpinBox()
         self.doubleBoxAlpha.valueChanged.connect(self.lavabreAlphaChanged)
         self.doubleBoxAlpha.setSuffix("    ")
@@ -151,9 +151,10 @@ class DialogNewHydrogram(QDialog):
         self.hydroArgs["type"] = s
 
     def lavabreDurationChanged(self, v):
-        self.hydroArgs["d"] = v
+        v_sec = v*3600
+        self.hydroArgs["d"] = v_sec
         self.doubleBoxTmax.setMaximum(v)
-        self.doubleBoxTimeStep.setMaximum(v)
+        self.doubleBoxTimeStep.setMaximum(v_sec)
     
     def lavabreTimeStepChanged(self, v):
         self.hydroArgs["dt"] = v

@@ -14,8 +14,6 @@ from front.DialogExportData import DialogExportData
 from utils import time_to_string
 
 import json
-import time
-import math
 
 class ResultsTab(Tab):
     
@@ -90,9 +88,16 @@ class ResultsTab(Tab):
         self.volumeLabel = QLabel("")
         self.plotLayout.addWidget(self.volumeLabel)
         self.sc = MplCanvas()
-        self.plotLayout.addWidget(self.sc, stretch=100)
+        self.sc.toggle.connect(self.toggleFigure)
+        # self.plotLayout.addWidget(self.sc, stretch=100)
         self.toolbar = NavigationToolbar(self.sc, self)
-        self.plotLayout.addWidget(self.toolbar)
+        self.plotWidget = QWidget(parent=self)
+        self._vlaout = QVBoxLayout()
+        self._vlaout.addWidget(self.sc)
+        self._vlaout.addWidget(self.toolbar)
+        self.plotWidget.setLayout(self._vlaout)
+        self.plotLayout.addWidget(self.plotWidget, stretch=100)
+        # self.plotLayout.addWidget(self.toolbar)
         self.plotData()
 
         self.layout.addLayout(self.listLayout)
@@ -265,10 +270,11 @@ class ResultsTab(Tab):
         self.varList3.addItem("z-z0 [m]\n (variation du fond)")
 
     def setVolumeInfo(self):
-        vIn = self.currentResult["volume_in"]
-        vOut = self.currentResult["volume_out"]
-        vStored = self.currentResult["volume_stored"]
-        self.volumeLabel.setText(f"Volume entrant : {vIn:.2f}m3\nVolume sortant : {vOut:.2f}m3\nVolume stocké : {vStored:.2f}m3\nSomme : {(vIn - vOut - vStored):.2f}m3\n")
+        if self.currentResult != None:
+            vIn = self.currentResult["volume_in"]
+            vOut = self.currentResult["volume_out"]
+            vStored = self.currentResult["volume_stored"]
+            self.volumeLabel.setText(f"Volume entrant : {vIn:.2f}m3\nVolume sortant : {vOut:.2f}m3\nVolume stocké : {vStored:.2f}m3\nSomme : {(vIn - vOut - vStored):.2f}m3\n")
 
     def setSlider(self):
         if self.currentResult == None:
@@ -284,10 +290,23 @@ class ResultsTab(Tab):
         self.plotData()
         return
 
+    def toggleFigure(self):
+        if self.plotWidget.parent():
+            # store the current index in the layout
+            self.layoutIndex = self.plotLayout.indexOf(self.plotWidget)
+            self.plotWidget.setParent(None)
+            # manually reparenting a widget requires to explicitly show it,
+            # usually by calling show() or setVisible(True), but this is
+            # automatically done when calling showFullScreen()
+            self.plotWidget.showFullScreen()
+        else:
+            self.plotLayout.insertWidget(self.layoutIndex, self.plotWidget)
+
     def rescale(self):
         a = self.sc.axes
-        a.relim()
-        a.autoscale()
+        for twinAx in a.get_shared_x_axes().get_siblings(a):
+            twinAx.relim()
+            twinAx.autoscale()
         self.sc.draw()
     
     def plotData(self):
@@ -312,18 +331,18 @@ class ResultsTab(Tab):
             self.sliderLabel.setText(f"time = {time_to_string(self.currentResult['time'][i], decimals=2)}")
             x = self.currentResult["abscissa"]
             couple = [(i, j) for j in range(len(x))]
-            xLabel = "x (m)"
+            xLabel = "x [m]"
         elif self.varList1.currentRow() == 1:
             self.sliderLabel.setText(f"abscissa = {self.currentResult['abscissa'][i]:.2f}m")
             x = self.currentResult["time"]
             couple = [(j, i) for j in range(len(x))]
-            xLabel = "t (s)"
+            xLabel = "t [s]"
 
         y1IndexList = ResultsTab.getIndexSelectedList(self.varList2)
         
         if 0 in y1IndexList:
             h = [self.currentResult["bottom_height"][c[0]][c[1]] + self.currentResult["water_depth"][c[0]][c[1]] for c in couple]
-            label = "h (hauteur d'eau)"
+            label = "h (hauteur d'eau) [m]"
             atLeastOneCurve = True
             lines +=  a.plot(x, h, label=label)
             if y1Label != "":
@@ -331,7 +350,7 @@ class ResultsTab(Tab):
             y1Label += label
         if 1 in y1IndexList:
             hc  = [self.currentResult["bottom_height"][c[0]][c[1]] + self.currentResult["critical_depth"][c[0]][c[1]] for c in couple]
-            label = "h_c (hauteur critique)"
+            label = "h_c (hauteur critique) [m]"
             atLeastOneCurve = True
             lines +=  a.plot(x, hc, label=label)
             if y1Label != "":
@@ -339,7 +358,7 @@ class ResultsTab(Tab):
             y1Label += label
         if 2 in y1IndexList:
             z  = [self.currentResult["bottom_height"][c[0]][c[1]] for c in couple]
-            label = "z (altitude du fond)"
+            label = "z (altitude du fond) [m]"
             atLeastOneCurve = True
             lines +=  a.plot(x, z, label=label)
             if y1Label != "":
@@ -349,7 +368,7 @@ class ResultsTab(Tab):
             a.fill_between(x, z, h, color="cyan")
         if 3 in y1IndexList:
             zmin  = [self.currentResult["minimal_bottom_height"][c[1]] for c in couple]
-            label = "z_min (altitude minimale)"
+            label = "z_min (altitude minimale) [m]"
             atLeastOneCurve = True
             lines +=  a.plot(x, zmin, label=label)
             if y1Label != "":
@@ -357,7 +376,7 @@ class ResultsTab(Tab):
             y1Label += label
         if 4 in y1IndexList:
             z0  = [self.currentResult["bottom_height"][0][c[1]] for c in couple]
-            label = "z_0 (altitude initiale)"
+            label = "z_0 (altitude initiale) [m]"
             atLeastOneCurve = True
             lines +=  a.plot(x, z0, label=label)
             if y1Label != "":
@@ -365,7 +384,7 @@ class ResultsTab(Tab):
             y1Label += label
         if 5 in y1IndexList:
             H  = [self.currentResult["energy"][c[0]][c[1]] for c in couple]
-            label = "H (charge)"
+            label = "H (charge) [m]"
             atLeastOneCurve = True
             lines +=  a.plot(x, H, label=label)
             if y1Label != "":
@@ -393,14 +412,14 @@ class ResultsTab(Tab):
 
         if 0 in y2IndexList:
             y2 = [self.currentResult["width"][c[0]][c[1]] for c in couple]
-            label = "b (largeur)"
+            label = "b (largeur) [m]"
             lines +=  twinAxe.plot(x, y2, label=label, linestyle="dashed")
             if y2Label != "":
                 y2Label += " - " 
             y2Label += label
         if 1 in y2IndexList:
             y2  = [self.currentResult["bottom_height"][c[0]][c[1]] - self.currentResult["bottom_height"][0][c[1]] for c in couple]
-            label = "z-z0 (variation du fond)"
+            label = "z-z0 (variation du fond) [m]"
             lines +=  twinAxe.plot(x, y2, label=label, linestyle="dashed")
             if y2Label != "":
                 y2Label += " - " 

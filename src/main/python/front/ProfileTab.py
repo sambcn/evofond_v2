@@ -1,7 +1,7 @@
 from urllib.parse import quote_plus
 from PyQt5.QtWidgets import (
     QVBoxLayout, QMessageBox, QTableView, QHeaderView, QGridLayout, QWidget, QMenu, QAction,
-    QLabel, QListWidget, QListWidgetItem, QHBoxLayout, QAbstractItemView, QPushButton
+    QLabel, QListWidget, QListWidgetItem, QHBoxLayout, QAbstractItemView, QPushButton, QFileDialog
 )
 
 from PyQt5.QtGui import QIcon, QFont
@@ -38,6 +38,10 @@ class ProfileTab(Tab):
         self.newProfileButton.setIcon(QIcon(self.getResource("images\\add.png")))
         self.newProfileButton.released.connect(self.newProfileButtonReleased)
         self.layoutList.addWidget(self.newProfileButton)
+        self.importProfileButton = QPushButton(" IMPORT")
+        self.importProfileButton.setIcon(QIcon(self.getResource("images\\export.png")))
+        self.importProfileButton.released.connect(self.importProfileButtonReleased)
+        self.layoutList.addWidget(self.importProfileButton)
         self.renameWidget = QPushButton(" RENAME")
         self.renameWidget.setIcon(QIcon(self.getResource("images\\rename.png")))
         self.renameWidget.released.connect(self.renameButtonReleased)
@@ -66,6 +70,12 @@ class ProfileTab(Tab):
         self.table.setHorizontalHeader(header)
         self.setTableData()
         self.tableLayout.addWidget(self.table)
+
+        self.addColumnButton = QPushButton(" Ajouter une colonne")
+        self.addColumnButton.setIcon(QIcon(self.getResource("images\\add.png")))
+        self.tableLayout.addWidget(self.addColumnButton, alignment=Qt.AlignLeft)
+        self.addColumnButton.released.connect(self.addColumnButtonReleased)
+        self.addColumnButton.setEnabled(False)
 
         self.tableLayout.addWidget(QLabel("Gestion de la granulométrie :"))
         self.granuloTable = QTableView()
@@ -107,19 +117,27 @@ class ProfileTab(Tab):
 
         self.plotLayout = QVBoxLayout()
         self.sc = MplCanvas()
-        self.plotLayout.addWidget(self.sc)
+        self.sc.toggle.connect(self.toggleFigure)
         self.toolbar = NavigationToolbar(self.sc, self)
-        self.plotLayout.addWidget(self.toolbar)
+
+        self.plotWidget = QWidget(parent=self)
+        self._vlaout = QVBoxLayout()
+        self._vlaout.addWidget(self.sc)
+        self._vlaout.addWidget(self.toolbar)
+        self.plotWidget.setLayout(self._vlaout)
+        self.plotLayout.addWidget(self.plotWidget)
+
         self.plotData()
         
-        self.layout1 = QHBoxLayout()
-        self.layout1.addLayout(self.layoutList)
-        self.layout1.addLayout(self.tableLayout)
-        self.layout.addLayout(self.layout1)
-        self.layout.addLayout(self.plotLayout)
+        self.layout.addLayout(self.layoutList)
+        self.layout.addLayout(self.tableLayout)
+        self.layout.addLayout(self.plotLayout, stretch=100)
 
     def contextMenuOnTable(self, pos):
         context = QMenu(self)
+        copy = QAction("Copier", self.table)
+        copy.triggered.connect(self.model.copy)
+        context.addAction(copy)
         if self.editing:
             paste = QAction("Coller", self.table)
             addUpperLine = QAction("Insérer une ligne au-dessus", self.table)
@@ -133,7 +151,7 @@ class ProfileTab(Tab):
             context.addAction(addUpperLine)
             context.addAction(addLowerLine)
             context.addAction(deleteLine)
-            context.exec(self.table.mapToGlobal(pos))
+        context.exec(self.table.mapToGlobal(pos))
 
     def contextMenuOnList(self, pos):
         context = QMenu(self)
@@ -141,14 +159,17 @@ class ProfileTab(Tab):
         if item != None:
             self.getProject().setProfileSelected(item.text())
             rename = QAction("Renommer", self.profileList)
+            importData = QAction("Importer des données", self.profileList)
             edit = QAction("Editer", self.profileList)
             copy = QAction("Copier", self.profileList)
             delete = QAction("Supprimer", self.profileList)
             rename.triggered.connect(self.renameButtonReleased)
+            importData.triggered.connect(self.importProfileButtonReleased)
             edit.triggered.connect(self.editProfileButtonReleased)
             copy.triggered.connect(self.copyProfileButtonReleased)
             delete.triggered.connect(self.deleteProfileButtonReleased)
             context.addAction(rename)
+            context.addAction(importData)
             context.addAction(edit)
             context.addAction(copy)
             context.addAction(delete)
@@ -179,6 +200,19 @@ class ProfileTab(Tab):
             return
         pass
 
+    def importProfileButtonReleased(self):
+        p = self.getProject().profileSelected
+        if p == None:
+            QMessageBox.critical(self, "pas de profil selectionné", "veuillez choisir un profil dans lequel importer vos données")
+            return
+        dlg = QFileDialog(self)
+        dlg.setFileMode(QFileDialog.ExistingFile)
+        dlg.setAcceptMode(QFileDialog.AcceptOpen)
+        dlg.setNameFilter("*.csv")
+        if dlg.exec():
+            path = dlg.selectedFiles()[-1]
+            p.importData(path)
+
     def renameButtonReleased(self):
         p = self.getProject().profileSelected
         if p == None:
@@ -205,15 +239,19 @@ class ProfileTab(Tab):
         if self.editing:
             if QMessageBox.question(self, "Fin d'édition", "Voulez-vous enregistrer les modifications ?") == QMessageBox.No:
                 self.model.restore()
+                header = self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+                self.table.setHorizontalHeader(header)
             else:
                 self.getProject().needToBeSaved = True
             self.editProfileButton.setIcon(QIcon(self.getResource("images\\edit.png")))
             self.editProfileButton.setText(" EDIT")
             self.profileList.setEnabled(True)
             self.newProfileButton.setEnabled(True)
+            self.importProfileButton.setEnabled(True)
             self.renameWidget.setEnabled(True)
             self.copyProfileButton.setEnabled(True)
             self.deleteProfileButton.setEnabled(True)
+            self.addColumnButton.setEnabled(False)
             self.editGranuloButton.setEnabled(True)
             self.enableOtherTabs()
         else:
@@ -221,9 +259,11 @@ class ProfileTab(Tab):
             self.editProfileButton.setText(" STOP EDITING")
             self.profileList.setEnabled(False)
             self.newProfileButton.setEnabled(False)
+            self.importProfileButton.setEnabled(False)
             self.copyProfileButton.setEnabled(False)
             self.renameWidget.setEnabled(False)
             self.deleteProfileButton.setEnabled(False)
+            self.addColumnButton.setEnabled(True)
             self.editGranuloButton.setEnabled(False)
             self.disableOtherTabs()
         self.editing = not(self.editing)
@@ -255,6 +295,18 @@ class ProfileTab(Tab):
             self.getProject().deleteProfile(p)
             self.profileList.takeItem(self.profileList.currentRow())
         return
+
+    def addColumnButtonReleased(self):
+        p = self.getProject().profileSelected
+        if p == None:
+            return
+        dlg = DialogQuestionAnswer(self, "Nom de la nouvelle colonne : ")
+        if dlg.exec():
+            p.addColumn(dlg.answer)
+            self.model.layoutChanged.emit()
+            header = self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.table.setHorizontalHeader(header)
+            self.updateVarLists()
 
     def sectionTypeListIndexChanged(self, i):
         self.tableLayout.setCurrentIndex(i)
@@ -307,6 +359,18 @@ class ProfileTab(Tab):
                 self.varList2.addItem(c)
                 self.varList3.addItem(c)
         return
+
+    def toggleFigure(self):
+        if self.plotWidget.parent():
+            # store the current index in the layout
+            self.layoutIndex = self.plotLayout.indexOf(self.plotWidget)
+            self.plotWidget.setParent(None)
+            # manually reparenting a widget requires to explicitly show it,
+            # usually by calling show() or setVisible(True), but this is
+            # automatically done when calling showFullScreen()
+            self.plotWidget.showFullScreen()
+        else:
+            self.plotLayout.insertWidget(self.layoutIndex, self.plotWidget)
 
     def plotData(self):
         if self.getProject().profileSelected == None:

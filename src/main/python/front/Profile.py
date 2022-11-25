@@ -27,6 +27,23 @@ class Profile():
     def setData(self, newData):
         self.data = newData
 
+    def importData(self, path):
+        data = pd.read_csv(path)
+        
+        nbCol = self.data.shape[1]
+        colNames = list(self.data.columns)
+        if data.shape[1] < nbCol:
+            raise ValueError(f"{self.type} profile data must have {nbCol} columns : {colNames}")
+        
+        self.data = data[[data.columns[i] for i in range(nbCol)]]
+        colDict = dict()
+        for nameInCSV, realName in zip(list(data.columns), colNames):
+            colDict[nameInCSV] = realName
+        self.data = self.data.rename(columns=colDict)
+
+    def addColumn(self, colName):
+        self.data[colName] = None
+
     def copy(self, name):
         return Profile(name, self.type, self.data.copy())
 

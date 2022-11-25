@@ -1,3 +1,5 @@
+import numpy as np
+
 from back.sedimentTransport.lefort2015 import Lefort2015
 from back.sedimentTransport.lefortsogreah1991 import LefortSogreah1991
 from back.sedimentTransport.meunier1989 import Meunier1989
@@ -79,8 +81,6 @@ def time_to_string(t, decimals=3):
     else:
         return f"{hours}h {minutes}min " + seconds_str
 
-class PopupError(Exception):
-    """
-    Exception raised when you want to show a critical QMessageBox.critical
-    """
-    pass
+def getAccumulatedVolume(t, Q):
+    V = [np.trapz(Q[:i], t[:i]) for i in range(1, len(t)+1)]
+    return V
