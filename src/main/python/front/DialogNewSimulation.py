@@ -163,6 +163,7 @@ class DialogNewSimulation(QDialog):
         button = QMessageBox.question(self, "Stop simulation", f"Are you sure to stop the current simulation ({self.nameResultDict[self.modelSelectionnedList[self.currentModelIndex]]}) ?")
         if button == QMessageBox.Yes:
             self.stopSimulation = True
+            self.updateModelSimulationLabel(text="Simulation stoppée")
 
     def updateProgressBar(self, percentage):
         self.pBarList[self.currentModelIndex].setValue(percentage)
