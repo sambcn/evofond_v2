@@ -45,7 +45,7 @@ class Profile():
         self.data[colName] = None
 
     def copy(self, name):
-        return Profile(name, self.type, self.data.copy())
+        return Profile(name, self.type, self.data.copy(), self.granulo.copy())
 
     def __eq__(self, other):
         if isinstance(other, Profile):

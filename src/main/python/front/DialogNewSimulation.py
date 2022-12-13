@@ -153,6 +153,7 @@ class DialogNewSimulation(QDialog):
                 continue
             result["name"] = self.nameResultDict[m]
             result["model"] = str(model)
+            result["saved"] = False
             self.parent().addResult(result)
             
 
@@ -168,8 +169,10 @@ class DialogNewSimulation(QDialog):
 
     def updateModelSimulationLabel(self, time=None, expectedTime=None, text=None):
         if text == None:
+            self.modelSimulationLabelList[self.currentModelIndex].setStyleSheet('color: black; font-style: Arial font; font-size: 12pt ')        
             self.modelSimulationLabelList[self.currentModelIndex].setText(f"temps de calcul : {time_to_string(time)}\n{'temps total estimé : '+time_to_string(expectedTime, decimals=0) if expectedTime != None else ''}")
         else:
+            self.modelSimulationLabelList[self.currentModelIndex].setStyleSheet('color: red; font-style: Arial font; font-size: 12pt ')        
             self.modelSimulationLabelList[self.currentModelIndex].setText(text)
 
     def closeEvent(self, event):

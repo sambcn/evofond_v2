@@ -27,6 +27,8 @@ class MainWindow(QMainWindow):
         # do stuff
         if not(self.tabs.projectTab.leavingProjectCheck()):
             event.ignore()
+        elif not(self.tabs.resultsTab.leavingCheck()):
+            event.ignore()
         else:
             event.accept() # let the window close
 

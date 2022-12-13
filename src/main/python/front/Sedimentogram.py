@@ -13,7 +13,7 @@ class Sedimentogram():
         elif sedimentoArgs["type"] == "Importer":
             self.initImport(sedimentoArgs)
         elif sedimentoArgs["type"] == "Manuel":
-            self.data = pd.DataFrame({'t (s)':[None], 'Qs (m3/s)':[None]})
+            self.data = pd.DataFrame({'t [s]':[None], 'Qs [m3/s]':[None]})
         elif sedimentoArgs["type"] == "copy":
             self.data = sedimentoArgs["data"]
 
@@ -26,7 +26,7 @@ class Sedimentogram():
         s = sedimentoArgs["slope"]
         granulometry = sedimentoArgs["granulometry"]
         Qs = calcSedimentogram(lawName, Q, b, s, granulometry) 
-        self.data = pd.DataFrame({'t (s)':t, 'Qs (m3/s)':Qs})
+        self.data = pd.DataFrame({'t [s]':t, 'Qs [m3/s]':Qs})
         self.properties += f"hydrogramme utilisé : {sedimentoArgs['hydrogram'].name}\n"        
         self.properties += f"loi de transport solide : {lawName}\n"        
         self.properties += f"pente d'apport : {s*100:.3f}%\n"        
@@ -39,7 +39,7 @@ class Sedimentogram():
             raise ValueError("Sedimentogram data must have at least two columns to describe Qs(t)")
         
         self.data = data[[data.columns[0], data.columns[1]]]
-        self.data = self.data.rename(columns={self.data.columns[0]:"t (s)", self.data.columns[1]:"Qs (m3/s)"})
+        self.data = self.data.rename(columns={self.data.columns[0]:"t [s]", self.data.columns[1]:"Qs [m3/s]"})
         self.properties += f"chemin du fichier importé : {sedimentoArgs['path']}\n"        
             
     def copy(self, name):

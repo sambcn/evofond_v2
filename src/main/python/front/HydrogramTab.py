@@ -11,8 +11,9 @@ from front.MplCanvas import MplCanvas, NavigationToolbar
 from front.DialogNewHydrogram import DialogNewHydrogram
 from front.DialogDelete import DialogDelete
 from front.DialogQuestionAnswer import DialogQuestionAnswer
-
 from utils import getAccumulatedVolume
+
+import numpy as np
 
 class HydrogramTab(Tab):
     
@@ -106,7 +107,7 @@ class HydrogramTab(Tab):
 
     def contextMenuOnTable(self, pos):
         context = QMenu(self)
-        copy = QAction("Copier", self.table)
+        copy = QAction("Copier", self.hydrogramData)
         copy.triggered.connect(self.model.copy)
         context.addAction(copy)
         if self.editing:
@@ -137,11 +138,12 @@ class HydrogramTab(Tab):
 
     def editButtonReleased(self):
         h = self.getProject().hydrogramSelected
-        if h == None:
+        m = self.model
+        if h == None or m == None:
             return True
         if self.editing:
             if QMessageBox.question(self, "Fin d'édition", "Voulez-vous enregistrer les modifications ?") == QMessageBox.No:
-                self.model.restore()
+                m.restore()
             else:
                 self.getProject().needToBeSaved = True
             self.editWidget.setIcon(QIcon(self.getResource("images\\edit.png")))
@@ -164,7 +166,7 @@ class HydrogramTab(Tab):
             self.propertiesWidget.setEnabled(False)
             self.disableOtherTabs()
         self.editing = not(self.editing)
-        self.model.changeEditionMode()
+        m.changeEditionMode()
         return
 
     def renameButtonReleased(self):
@@ -253,15 +255,16 @@ class HydrogramTab(Tab):
             df = self.getProject().hydrogramSelected.data
 
         subdf = df[~(df[df.columns[0]].isnull()) & ~(df[df.columns[1]].isnull())]
-        lines += a.plot(subdf[subdf.columns[0]], subdf[subdf.columns[1]], label="Débit", color="blue")
-        a.set_xlabel(subdf.columns[0])
+        timeInHour = np.array(subdf[subdf.columns[0]])/3600
+        lines += a.plot(timeInHour, subdf[subdf.columns[1]], label="Débit [m3/s]", color="blue")
+        a.set_xlabel("t [h]")
         a.set_ylabel(subdf.columns[1])
         a.relim()
         a.autoscale()
 
         twinAx = a.twinx()
         vAccumulated = getAccumulatedVolume(subdf[subdf.columns[0]], subdf[subdf.columns[1]])
-        lines += twinAx.plot(subdf[subdf.columns[0]], vAccumulated, label="Volume cumulé", color="blue", linestyle="dashdot")
+        lines += twinAx.plot(timeInHour, vAccumulated, label="Volume cumulé [m3]", color="blue", linestyle="dashdot")
         twinAx.set_ylabel("Volume cumulé (m3)")
 
         if len(vAccumulated) > 0:
@@ -269,20 +272,18 @@ class HydrogramTab(Tab):
         a.legend(lines, [l.get_label() for l in lines])
         self.sc.draw()
         return
-
-    def makeHydrogramListEmpty(self):
-        for i in range(self.hydrogramList.count()-1, -1, -1):
-            self.hydrogramList.takeItem(i)
-        return
         
     def setHydrogramList(self):
-        self.makeHydrogramListEmpty()
-        for i, h in enumerate(self.getProject().hydrogramList):
-            item = QListWidgetItem(h.name)
-            item.setSelected(i == self.getProject().hydrogramSelectedIndex)
-            self.hydrogramList.addItem(item)
+        hSelected = self.getProject().hydrogramSelected
+        self.hydrogramList.clear()
+        for h in self.getProject().hydrogramList:
+            self.hydrogramList.addItem(h.name)
+            if h == hSelected:
+                self.hydrogramList.setCurrentRow(self.hydrogramList.count()-1)
         return
 
     def refresh(self):
         self.setHydrogramList()
+        self.displayHydrogramData()
+        self.plotData()
         return

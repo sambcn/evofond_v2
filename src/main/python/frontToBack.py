@@ -12,6 +12,8 @@ def simulateModel(project, model, frontBuffer=None):
     """
     if project==None or model==None:
         return
+    if not(model.getBoolState(project)):
+        raise ValueError(f"Modèle incomplet, veuillez vérifier le modèle '{model.name}' dans l'onglet modèle")
     frontprofile = project.getProfile(model.profile)
     df = frontprofile.data
     for i in range(df.shape[1]-1, -1, -1):
@@ -19,7 +21,7 @@ def simulateModel(project, model, frontBuffer=None):
     df = df.sort_values(by=df.columns[0], ascending=False)
     x = df.iloc[:,0].values.tolist()
     if x==[]:
-        raise ValueError(f"Profil vide, veuillez vérifier que la colonne des abscisses n'est pas vide et que les lignes sont complètement remplies")
+        raise ValueError(f"Profil vide ('{model.profile}'), veuillez vérifier que la colonne des abscisses n'est pas vide et que les lignes sont complètement remplies")
     maxi = max(x)
     x = [maxi - xi for xi in x]
     listOfSection = []
@@ -28,7 +30,7 @@ def simulateModel(project, model, frontBuffer=None):
             granuloName = frontprofile.getGranuloName(df.iloc[i][0])
             g = project.getGranulometry(granuloName)
             if g == None:
-                raise ValueError(f"Pas de granulométrie renseigné pour x={df.iloc[i][0]}")
+                raise ValueError(f"Pas de granulométrie renseignée pour x={df.iloc[i][0]} dans le profil '{model.profile}'")
             granulometry = convertGranuloFromFrontToBack(g)
 
 
@@ -55,7 +57,7 @@ def simulateModel(project, model, frontBuffer=None):
     t_sedimento = df.iloc[:,0].values.tolist()
     Qs = df.iloc[:,1].values.tolist()
     if t_hydro[0] < t_sedimento[0] or t_hydro[-1] > t_sedimento[-1]:
-        raise ValueError("Les instants de l'hydrogramme ne sont pas inclus dans ceux du sédimentogramme. \n\n Veuillez modifier cela pour que l'algorithme puisse connaître le débit solide à chaque instant de l'évènement hydraulique.")
+        raise ValueError(f"Les instants de l'hydrogramme '{model.hydrogram}' ne sont pas inclus dans ceux du sédimentogramme '{model.sedimentogram}'. \n\n Veuillez modifier cela pour que l'algorithme puisse connaître le débit solide à chaque instant de l'évènement hydraulique.")
     Qs = np.interp(t_hydro, t_sedimento, Qs)
     law = SEDIMENT_TRANSPORT_LAW_DICT[model.sedimentTransportLaw]()
     
@@ -76,5 +78,7 @@ def simulateModel(project, model, frontBuffer=None):
     # profile.compute_depth(Q[0], plot=True, friction_law=model.frictionLaw, upstream_condition=upstreamCondition, downstream_condition=downstreamCondition)
     # plt.show()
     # return None
-    result = profile.compute_event(hydrogram=Q, t_hydrogram=t_hydro, law=law, sedimentogram=Qs, friction_law=model.frictionLaw, critical=(model.hydroModel==AVAILABLE_HYDRAULIC_MODEL[0]), upstream_condition=upstreamCondition, downstream_condition=downstreamCondition, plot=False, frontBuffer=frontBuffer)
+    cfl = None if model.dt != None else model.cfl
+    result = profile.compute_event(hydrogram=Q, t_hydrogram=t_hydro, law=law, sedimentogram=Qs, friction_law=model.frictionLaw, critical=(model.hydroModel==AVAILABLE_HYDRAULIC_MODEL[0]), upstream_condition=upstreamCondition, downstream_condition=downstreamCondition, plot=False, frontBuffer=frontBuffer, cfl=cfl, dt=model.dt, dt_save=model.dtForSave)
+    
     return result

@@ -1,3 +1,5 @@
+from utils import AVAILABLE_HYDRAULIC_MODEL
+
 class Model():
 
     def __init__(self, name):
@@ -12,6 +14,9 @@ class Model():
         self.frictionLaw = None
         self.upstreamCondition = None
         self.downstreamCondition = None
+        self.cfl = 1.0
+        self.dt = None
+        self.dtForSave = None
 
     def copy(self, newName):
         m = Model(newName)
@@ -25,6 +30,9 @@ class Model():
         m.frictionLaw = self.frictionLaw
         m.upstreamCondition = self.upstreamCondition
         m.downstreamCondition = self.downstreamCondition
+        m.cfl = self.cfl
+        m.dt = self.dt
+        m.dtForSave = self.dtForSave
         return m
 
     def __str__(self):
@@ -36,9 +44,18 @@ class Model():
         string += f"interpolation = {self.interpolation}\n"
         string += f"dx = {self.dx}\n"
         string += f"modèle hydraulique = {self.hydroModel}\n"
-        string += f"loi de frottement = {self.frictionLaw}\n"
-        string += f"condition amont = {self.upstreamCondition}\n"
-        string += f"condition avale = {self.downstreamCondition}\n"
+        if self.hydroModel == AVAILABLE_HYDRAULIC_MODEL[1]:
+            string += f"loi de frottement = {self.frictionLaw}\n"
+            string += f"condition amont = {self.upstreamCondition}\n"
+            string += f"condition avale = {self.downstreamCondition}\n"
+        if self.dt == None:
+            string += f"cfl = {self.cfl}\n"
+        else:
+            string += f"dt = {self.dt}\n"
+        if self.dtForSave == None:
+            string += f"dtForSave = 'Sauvegarde complète'\n"
+        else:
+            string += f"dtForSave = {self.dtForSave}\n"
         return string
 
     def getBoolState(self, project):

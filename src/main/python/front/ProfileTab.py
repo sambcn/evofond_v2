@@ -212,6 +212,7 @@ class ProfileTab(Tab):
         if dlg.exec():
             path = dlg.selectedFiles()[-1]
             p.importData(path)
+            self.model.layoutChanged.emit()
 
     def renameButtonReleased(self):
         p = self.getProject().profileSelected
@@ -321,22 +322,21 @@ class ProfileTab(Tab):
             p = self.getProject().profileSelected
             self.model = TableModel(self, p)
             self.table.setModel(self.model)
-            
-    def makeProfileListEmpty(self):
-        for i in range(self.profileList.count()-1, -1, -1):
-            self.profileList.takeItem(i)
         return
         
     def setProfileList(self):
-        self.makeProfileListEmpty()
-        for i, p in enumerate(self.getProject().profileList):
-            item = QListWidgetItem(p.name)
-            item.setSelected(i == self.getProject().profileSelectedIndex)
-            self.profileList.addItem(item)
+        pSelected = self.getProject().profileSelected
+        self.profileList.clear()
+        for p in self.getProject().getProfileNameList():
+            self.profileList.addItem(p)
+        if pSelected != None:
+            self.profileList.setCurrentRow(self.getProject().profileList.index(pSelected))
         return
 
     def refresh(self):
         self.setProfileList()
+        self.updateVarLists()
+        self.plotData()
         return
 
     def profileChoiceChanged(self, name):
@@ -436,8 +436,6 @@ class ProfileTab(Tab):
         self.sc.draw()
         
         return
-
-
 
     # static function
 

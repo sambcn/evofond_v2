@@ -105,10 +105,11 @@ class TableModel(QAbstractTableModel):
     def changeEditionMode(self):
         self.editing = not(self.editing)
         self._object.data = self._object.data.sort_values(by=[self._object.data.columns[0]])
-        self.tab.plotData()
         self.backup = self._object.data.copy()
+        self.tab.plotData()
 
     def restore(self):
         self._object.data = self.backup
         self.layoutChanged.emit()
+        self.tab.updateVarLists()
         self.tab.plotData()

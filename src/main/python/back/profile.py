@@ -108,6 +108,53 @@ class Profile():
         
     # resolution methods
 
+    def compute_depth_critical(self, Q_list):
+        z_list = self.get_z_list()
+        yc_list = self.get_yc_list(Q_list)
+        y_list = yc_list[:]
+        n = self.get_nb_section()
+        section_list = self.get_section_list()
+        i_current = 0
+        section_current = section_list[i_current]
+        y_current = y_list[i_current]
+        Q_current = Q_list[i_current]
+        H_current = section_current.get_H(Q_current, y_current)
+        z_current = z_list[i_current]
+        yc_current = yc_list[i_current]
+        while i_current < n-1:
+            H_next = section_list[i_current+1].get_H(Q_list[i_current+1], y_list[i_current+1])
+            if H_next - H_current > 10**(-3):
+                try:
+                    y_supercritical = section_current.get_y_from_Hs(Q_current, H_next-z_current, True, yc_current)
+                    Fs_supercritical = section_current.get_Fs(Q_current, y_supercritical)
+                    supercritical_success = True
+                except ValueError as e:
+                    supercritical_success = False
+                try:
+                    y_subcritical = section_current.get_y_from_Hs(Q_current, H_next-z_current, False, yc_current)
+                    Fs_subcritical = section_current.get_Fs(Q_current, y_subcritical)
+                    subcritical_success = True
+                except ValueError as e:
+                    subcritical_success = False
+                if supercritical_success and subcritical_success:
+                    y_list[i_current] = y_supercritical if Fs_supercritical >= Fs_subcritical else y_subcritical
+                elif supercritical_success:
+                    y_list[i_current] = y_supercritical
+                elif subcritical_success:
+                    y_list[i_current] = y_subcritical
+                else:
+                    raise(ValueError("Impossible to find a water depth associated with the given energy"))
+                i_current = max(0, i_current-1)
+            else:
+                i_current += 1
+            section_current = section_list[i_current]
+            y_current = y_list[i_current]
+            Q_current = Q_list[i_current]
+            H_current = section_current.get_H(Q_current, y_current)
+            z_current = z_list[i_current]
+            yc_current = yc_list[i_current]        
+        return y_list
+
     @Performance.measure_perf
     def compute_depth(self, Q_list, plot=False, method="ImprovedEuler", friction_law="Ferguson", compare=None, upstream_condition="normal_depth", downstream_condition="normal_depth"):
         """
@@ -204,7 +251,7 @@ class Profile():
             nb_loop += 1
 
         if plot:
-           self.plot(y=y_list, Q_list=Q_list, friction_law=friction_law, compare=compare, background=True)
+           self.plot(y=y_list, Q_list=Q_list, friction_law=friction_law, compare=compare, background=False)
             
         return y_list
 
@@ -256,7 +303,7 @@ class Profile():
 
         return QsIn
 
-    def compute_event(self, hydrogram, t_hydrogram, law, sedimentogram=None, backup=False, debug=False, method="ImprovedEuler", friction_law="Ferguson", cfl=1, critical=False, upstream_condition="normal_depth", downstream_condition="normal_depth", plot=False, animate=False, injection=None, frontBuffer=None):
+    def compute_event(self, hydrogram, t_hydrogram, law, sedimentogram=None, backup=False, debug=False, method="ImprovedEuler", friction_law="Ferguson", cfl=1, dt=None, dt_save=None, critical=False, upstream_condition="normal_depth", downstream_condition="normal_depth", plot=False, animate=False, injection=None, frontBuffer=None):
         """
         main function of the class : compute an entire event and return the evolution of the profile
         """
@@ -264,8 +311,9 @@ class Profile():
    
         start_computation = time()
         t = t_hydrogram[0]
+        t_save = t
         y_matrix = [] # list of the water depth during the event
-        z_matrix = [self.get_z_list()] # list of the bottom height during the event
+        z_matrix = [] # list of the bottom height during the event
         h_matrix = [] # list of head during the event
         V_in = 0 # solid volume gone into the profile during the event
         V_out = 0 # solid volume gone out of the profile
@@ -274,7 +322,7 @@ class Profile():
         yc_history = []
         yn_history = []
         b_history = []
-        t_history = [t] # list of the t time of each step of the commputation
+        t_history = [] # list of the t time of each step of the commputation
         dt_history = [] # list of the time steps used at each iteration
         n = self.get_nb_section()
         tf = t_hydrogram[-1]
@@ -299,7 +347,7 @@ class Profile():
         # next_t_print = 0
         while t <= tf:
             
-            ###
+            ### front display
             frontBuffer.updateProgressBar((t/t_hydrogram[-1])*100)
             currentTime = time()-start_computation
             expectedTime = currentTime * tf / t if t != 0 else None
@@ -312,40 +360,43 @@ class Profile():
             Q = np.interp(t, t_hydrogram, hydrogram)
             ### Q = 0 => nothing happens, we skip
             if Q <= 10**(-3):
-                Q_history.append([0 for _ in range(n)])
-                yc_history.append([0 for _ in range(n)])
-                b_history.append([s.get_b() for s in self.get_section_list()])
-                y_matrix.append([0 for _ in range(n)])                
-                h_matrix.append([0 for _ in range(n)])     
-                z_matrix.append(z_matrix[-1])
-                Qs_history.append(0)           
-                if t != tf:
-                    t_hydrogram_index = 0
-                    while t_hydrogram[t_hydrogram_index] <= t:
-                        t_hydrogram_index += 1
-                    dt_history.append(t_hydrogram[t_hydrogram_index]-t)
-                    t = t_hydrogram[t_hydrogram_index]
+                if dt_save==None or t >= t_save:
+                    Q_history.append([0 for _ in range(n)])
+                    yc_history.append([0 for _ in range(n)])
+                    b_history.append([s.get_b() for s in self.get_section_list()])
+                    y_matrix.append([0 for _ in range(n)])                
+                    h_matrix.append([0 for _ in range(n)])     
+                    z_matrix.append(self.get_z_list())
+                    Qs_history.append(0)       
+                    if t_history != []:
+                        dt_history.append(t-t_history[-1])
                     t_history.append(t)
-                    continue
+                    if dt_save != None:
+                        t_save = t + dt_save
+                if t != tf:
+                    if cfl == None:
+                        t += dt
+                        continue
+                    else:
+                        t_hydrogram_index = 0
+                        while t_hydrogram[t_hydrogram_index] <= t:
+                            t_hydrogram_index += 1
+                        t = t_hydrogram[t_hydrogram_index]
+                        continue
                 else:
                     break
             ###
 
             Q_list = [Q for _ in range(n)]
-            Q_history.append(Q_list)
-            yc_history.append(self.get_yc_list(Q_list))
-            # yn_history.append(self.get_yn_list(Q_list, friction_law=friction_law if friction_law != None else "Ferguson"))
-            b_history.append([s.get_b() for s in self.get_section_list()])
 
             # hydraulic computations
             if critical:
-                y_list = self.get_yc_list(Q_list)
+                y_list = self.compute_depth_critical(Q_list)
             else:
                 y_list = self.compute_depth(Q_list, method=method, friction_law=friction_law, upstream_condition=upstream_condition, downstream_condition=downstream_condition)
 
-            y_matrix.append(y_list)
-            h_matrix.append([s.get_H(Q, y_list[i]) for i, s in enumerate(self.__section_list)])
-            dt = self.find_best_dt(Q, y_list, cfl=cfl)
+            if cfl != None:
+                dt = self.find_best_dt(Q, y_list, cfl=cfl)
             # t_aux = list(np.sort(abs(np.array(t_hydrogram) - t)))
             # dt_hydrogram = t_aux[1] + t_aux[0]
             # print(f"dt_opti={dt_opti:.3f}, dt_hydrogram={dt_hydrogram:.3f}")
@@ -366,15 +417,29 @@ class Profile():
                 QsIn0 = law.compute_Qs(initial_profile.get_upstream_section(), Q, y_list[0], y_list[1]) # Gonna change, it is a given parameter, chosen by users
             else:
                 QsIn0 = np.interp(t, t_hydrogram, sedimentogram)
-            Qs_history.append(QsIn0)
+
+            # saving data
+            if dt_save==None or t >= t_save:
+                Q_history.append(Q_list)
+                yc_history.append(self.get_yc_list(Q_list))
+                # yn_history.append(self.get_yn_list(Q_list, friction_law=friction_law if friction_law != None else "Ferguson"))
+                y_matrix.append(y_list)
+                h_matrix.append([s.get_H(Q, y_list[i]) for i, s in enumerate(self.__section_list)])                
+                b_history.append([s.get_b() for s in self.get_section_list()])
+                Qs_history.append(QsIn0)
+                z_matrix.append(self.get_z_list())
+                if t_history != []:
+                    dt_history.append(t-t_history[-1])
+                t_history.append(t)
+                if dt_save != None:
+                    t_save = t + dt_save
+
+
             V_in += QsIn0*dt
             QsOut = self.update_bottom(Q, y_list, QsIn0, dt, law, friction_law=friction_law)
             V_out += QsOut*dt
-            z_matrix.append(self.get_z_list())
 
             t += dt
-            dt_history.append(dt)
-            t_history.append(t)
             # debug
             # if debug:
             #     total_volume_difference.append(V_in - V_out - (self.get_stored_volume() - stored_volume_start))
@@ -384,7 +449,8 @@ class Profile():
 
         frontBuffer.updateProgressBar(100)
         frontBuffer.updateModelSimulationLabel(time()-start_computation)
-        try:       
+        try:
+
             Q = np.interp(t, t_hydrogram, hydrogram)
             ###
             if Q <= 10**(-3):
@@ -392,16 +458,26 @@ class Profile():
                 yc_history.append([0 for _ in range(n)])
                 b_history.append([s.get_b() for s in self.get_section_list()])
                 y_matrix.append([0 for _ in range(n)])                
-                h_matrix.append([0 for _ in range(n)]) 
+                h_matrix.append([0 for _ in range(n)])
+                Qs_history.append(QsIn0)
+                z_matrix.append(self.get_z_list())
+                if t_history != []:
+                    dt_history.append(t-t_history[-1])
+                t_history.append(t) 
             ###
             else:
                 Q_list = [Q for _ in range(n)]
                 Q_history.append(Q_list)
-                y_matrix.append(self.get_yc_list(Q_list) if critical else self.compute_depth(Q_list, method=method, friction_law=friction_law, upstream_condition=upstream_condition, downstream_condition=downstream_condition))
+                y_matrix.append(self.compute_depth_critical(Q_list) if critical else self.compute_depth(Q_list, method=method, friction_law=friction_law, upstream_condition=upstream_condition, downstream_condition=downstream_condition))
                 h_matrix.append([s.get_H(Q, y_matrix[-1][i]) for i, s in enumerate(self.get_section_list())])
                 yc_history.append(self.get_yc_list(Q_list))
                 # yn_history.append(self.get_yn_list(Q_list, friction_law=friction_law if friction_law != None else "Ferguson"))
                 b_history.append([s.get_b() for s in self.get_section_list()])
+                Qs_history.append(QsIn0)
+                z_matrix.append(self.get_z_list())
+                if t_history != []:
+                    dt_history.append(t-t_history[-1])
+                t_history.append(t)
         except Exception:
             pass
         stored_volume_end = self.get_stored_volume()

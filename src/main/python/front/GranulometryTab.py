@@ -88,11 +88,12 @@ class GranulometryTab(Tab):
     #     return
         
     def setGranuloList(self):
+        gSelected = self.getProject().granulometrySelected
         self.granuloList.clear()
-        for i, h in enumerate(self.getProject().granulometryList):
-            item = QListWidgetItem(h.name)
-            item.setSelected(i == self.getProject().granulometrySelectedIndex)
-            self.granuloList.addItem(item)
+        for g in self.getProject().granulometryList:
+            self.granuloList.addItem(g.name)
+            if g == gSelected:
+                self.granuloList.setCurrentRow(self.granuloList.count()-1)
         return
 
     def refresh(self):

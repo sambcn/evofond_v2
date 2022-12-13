@@ -11,6 +11,8 @@ from front.MplCanvas import MplCanvas, NavigationToolbar
 from frontToBack import simulateModel
 from front.DialogNewSimulation import DialogNewSimulation
 from front.DialogExportData import DialogExportData
+from front.DialogDelete import DialogDelete
+from front.DialogPlotProfileDataOnResults import DialogPlotProfileDataOnResults
 from utils import time_to_string
 
 import json
@@ -75,6 +77,13 @@ class ResultsTab(Tab):
         w.setFont(QFont('Arial font', 10))
         self.paramLayout.addWidget(w)
 
+        self.plotProfileDataButton = QPushButton(" Superposer les données d'un profil")
+        self.plotProfileDataButton.setIcon(QIcon(self.getResource("images\\doubleplot.png")))
+        self.plotProfileDataButton.released.connect(self.plotProfileDataButtonReleased)
+        self.paramLayout.addWidget(self.plotProfileDataButton)
+        self.dataAxis1 = dict()
+        self.dataAxis2 = dict()
+        self.profileName = None
         self.exportButton = QPushButton(" Exporter les données")
         self.exportButton.setIcon(QIcon(self.getResource("images\\export.png")))
         self.exportButton.released.connect(self.exportButtonReleased)
@@ -86,6 +95,7 @@ class ResultsTab(Tab):
         self.rescaleButton.released.connect(self.rescale)
         self.plotLayout.addWidget(self.rescaleButton)
         self.volumeLabel = QLabel("")
+        self.volumeLabel.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.plotLayout.addWidget(self.volumeLabel)
         self.sc = MplCanvas()
         self.sc.toggle.connect(self.toggleFigure)
@@ -153,6 +163,7 @@ class ResultsTab(Tab):
             json.dump(self.currentResult, f)
             waitingWindow.close()            
             f.close()
+            self.currentResult["saved"] = True
             QMessageBox.information(self, "Résultat sauvegardé", "Le résultat a été sauvegardé avec succès !")
         return
 
@@ -221,14 +232,19 @@ class ResultsTab(Tab):
         return True
 
     def deleteResultButtonReleased(self):
-        self.deleteResult(self.resultQList.currentItem().text())
-        self.resultQList.takeItem(self.resultQList.currentRow())
-        self.currentResult = self.getResult(self.resultQList.currentItem().text()) if self.resultQList.currentItem() != None else None
+        resultName = self.resultQList.currentItem().text()
+        if resultName in self.getResultNameList():
+            dlg = DialogDelete(resultName, parent=self)
+            if dlg.exec():
+                self.deleteResult(self.resultQList.currentItem().text())
+                self.resultQList.takeItem(self.resultQList.currentRow())
+                self.currentResult = self.getResult(self.resultQList.currentItem().text()) if self.resultQList.currentItem() != None else None
 
     def resultChoiceChanged(self, s):
         self.currentResult = self.getResult(s)
         self.setVolumeInfo()
         self.setSlider()
+        self.plotData()
 
     def setResultList(self):
         self.currentResult = None
@@ -238,13 +254,20 @@ class ResultsTab(Tab):
     def refresh(self):
         self.setResultList()
 
+    def plotProfileDataButtonReleased(self):
+        dlg = DialogPlotProfileDataOnResults(parent=self)
+        if dlg.exec():
+            self.dataAxis1 = dlg.dataAxis1
+            self.dataAxis2 = dlg.dataAxis2
+            self.profileName = dlg.profileName
+            self.plotData()
+
     def exportButtonReleased(self):
         if self.currentResult == None:
             QMessageBox.critical(self, "Erreur : pas de fichier résultat sélectionné", "Veuillez choisir un fichier résultat dans la liste.")
             return
         dlg = DialogExportData(self)
-        if dlg.exec():
-            pass
+        dlg.exec()
 
     def setVarLists(self):
         self.varList1.clear()
@@ -283,7 +306,7 @@ class ResultsTab(Tab):
             self.slider.setMaximum(len(self.currentResult["time"])-1)
         elif self.varList1.currentRow() == 1:
             self.slider.setMaximum(len(self.currentResult["abscissa"])-1)
-        self.slider.setValue(self.slider.maximum())
+        # self.slider.setValue(self.slider.maximum())
 
     def varList1changed(self):
         self.setSlider()
@@ -398,10 +421,15 @@ class ResultsTab(Tab):
         #     if y1Label != "":
         #         y1Label += " - " 
         #     y1Label += label
+        for key, val in self.dataAxis1.items():
+            lines +=  a.plot(val[0], val[1], label=key)
+            if y1Label != "":
+                y1Label += " - " 
+            y1Label += " ".join(key.split())
 
         y2IndexList = ResultsTab.getIndexSelectedList(self.varList3)
 
-        if y2IndexList != []:
+        if y2IndexList != [] or self.dataAxis2:
             atLeastOneCurve = True
             twinAxeList = a.get_shared_x_axes().get_siblings(a)
             twinAxeList.pop(twinAxeList.index(a))
@@ -425,6 +453,13 @@ class ResultsTab(Tab):
                 y2Label += " - " 
             y2Label += label
 
+        for key, val in self.dataAxis2.items():
+            lines +=  twinAxe.plot(val[0], val[1], label=key, linestyle="dashed")
+            if y2Label != "":
+                y2Label += " - " 
+            y2Label += " ".join(key.split())
+
+
         a.set_xlabel(xLabel)
         a.set_ylabel(y1Label)
         if y2IndexList != []:
@@ -447,4 +482,19 @@ class ResultsTab(Tab):
                 result.append(i)
         return result
 
+    def leavingCheck(self):
+        saved = True
+        notSavedList = []
+        for r in self.resultList:
+            if not(r["saved"]):
+                saved = False
+                notSavedList.append(r["name"]) 
+
+        if not(saved):
+            button = QMessageBox.question(self, "Résultats non enregistrées", f"Les résultats suivants ne sont pas enregistrés : {notSavedList}. Ils ne seront pas récupérables, souhaitez vous quitter ?")
+            if button == QMessageBox.Yes:
+                return True
+            if button == QMessageBox.No:
+                return False
+        return True
 

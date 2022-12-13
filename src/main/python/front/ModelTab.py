@@ -10,6 +10,7 @@ from front.Tab import Tab
 from front.DialogDelete import DialogDelete
 from front.DialogNewModel import DialogNewModel
 from front.DialogQuestionAnswer import DialogQuestionAnswer
+from front.DialogCFL import DialogCFL
 from utils import AVAILABLE_HYDRAULIC_MODEL, AVAILABLE_FRICTION_LAW, AVAILABLE_LIMITS, SEDIMENT_TRANSPORT_LAW_DICT
 
 class ModelTab(Tab):
@@ -45,7 +46,7 @@ class ModelTab(Tab):
         self.modelLayout = QGridLayout()
 
         # Refresh button
-        self.refreshWidget = QPushButton(" Rafraîchir les listes")
+        self.refreshWidget = QPushButton(" Rafraîchir")
         self.refreshWidget.setIcon(QIcon(self.getResource("images\\refresh.png")))
         self.refreshWidget.released.connect(self.refresh)
         self.modelLayout.addWidget(self.refreshWidget, 0, 0, alignment=Qt.AlignHCenter)
@@ -107,10 +108,10 @@ class ModelTab(Tab):
 
         # Boundary conditions
         self.upstreamConditionLabel = QLabel("Condition amont :")
-        self.modelLayout.addWidget(self.upstreamConditionLabel, 9, 0)
+        self.modelLayout.addWidget(self.upstreamConditionLabel, 9, 0, alignment=Qt.AlignRight)
         self.upstreamConditionLabel.setVisible(False)
         self.downstreamConditionLabel = QLabel("Condition avale :")
-        self.modelLayout.addWidget(self.downstreamConditionLabel, 11, 0)
+        self.modelLayout.addWidget(self.downstreamConditionLabel, 11, 0, alignment=Qt.AlignRight)
         self.downstreamConditionLabel.setVisible(False)
         self.upstreamConditionComboBox = QComboBox()
         self.upstreamConditionComboBox.currentIndexChanged.connect(self.upstreamConditionChanged)
@@ -130,11 +131,55 @@ class ModelTab(Tab):
             self.upstreamConditionComboBox.addItem(l)
             self.downstreamConditionComboBox.addItem(l)
         self.modelLayout.addWidget(self.upstreamConditionComboBox, 9, 1)
-        self.modelLayout.addWidget(self.upstreamLabel, 10, 0)
+        self.modelLayout.addWidget(self.upstreamLabel, 10, 0, alignment=Qt.AlignRight)
         self.modelLayout.addWidget(self.upstreamDoubleSpinBox, 10, 1)
         self.modelLayout.addWidget(self.downstreamConditionComboBox, 11, 1)
-        self.modelLayout.addWidget(self.downstreamLabel, 12, 0)
+        self.modelLayout.addWidget(self.downstreamLabel, 12, 0, alignment=Qt.AlignRight)
         self.modelLayout.addWidget(self.downstreamDoubleSpinBox, 12, 1)
+
+        # CFL or dt
+        self.dtMethodLabel = QLabel("Pas de temps automatique : ")
+        self.dtMethodCheckBox = QCheckBox()
+        self.dtMethodCheckBox.setChecked(True)
+        self.dtMethodCheckBox.stateChanged.connect(self.dtMethodChanged)
+        self.modelLayout.addWidget(self.dtMethodLabel, 13, 0, alignment=Qt.AlignRight)
+        self.modelLayout.addWidget(self.dtMethodCheckBox, 13, 1)
+        self.CFLLabel = QLabel("Nombre de Courant (condition CFL) : ")
+        self.modelLayout.addWidget(self.CFLLabel, 14, 0, alignment=Qt.AlignRight)
+        self.changeCFLButton = QPushButton()
+        self.setChangeCFLButtonText()
+        self.changeCFLButton.released.connect(self.cflChanged)
+        self.modelLayout.addWidget(self.changeCFLButton, 14, 1)
+        self.dtLabel = QLabel("Pas de temps manuel : ")
+        self.dtDoubleSpinBox = QDoubleSpinBox()
+        self.dtDoubleSpinBox.setSuffix(" s")
+        self.dtDoubleSpinBox.setValue(1)
+        self.dtDoubleSpinBox.setDecimals(2)
+        self.dtDoubleSpinBox.setMinimum(0.01)
+        self.dtDoubleSpinBox.setMaximum(9999.99)
+        self.dtDoubleSpinBox.valueChanged.connect(self.dtChanged)
+        self.modelLayout.addWidget(self.dtLabel, 15, 0, alignment=Qt.AlignRight)
+        self.modelLayout.addWidget(self.dtDoubleSpinBox, 15, 1)
+        self.dtLabel.setVisible(False)
+        self.dtDoubleSpinBox.setVisible(False)
+
+        # Saving time step
+        self.savingLabel = QLabel("Enregistrer toute la simulation : ")
+        self.savingCheckBox = QCheckBox()
+        self.savingCheckBox.setChecked(True)
+        self.savingCheckBox.stateChanged.connect(self.savingChanged)
+        self.savingTimeStepLabel = QLabel("Pas d'enregistrement : ")
+        self.savingTimeStepDoubleSpinBox = QDoubleSpinBox()
+        self.savingTimeStepDoubleSpinBox.setSuffix(" s")
+        self.savingTimeStepDoubleSpinBox.setMaximum(999999.99)
+        self.savingTimeStepDoubleSpinBox.setMinimum(0.01)
+        self.savingTimeStepLabel.setVisible(False)
+        self.savingTimeStepDoubleSpinBox.setVisible(False)
+        self.savingTimeStepDoubleSpinBox.valueChanged.connect(self.dtForSaveChanged)
+        self.modelLayout.addWidget(self.savingLabel, 16, 0, alignment=Qt.AlignRight)
+        self.modelLayout.addWidget(self.savingCheckBox, 16, 1)
+        self.modelLayout.addWidget(self.savingTimeStepLabel, 17, 0, alignment=Qt.AlignRight)
+        self.modelLayout.addWidget(self.savingTimeStepDoubleSpinBox, 17, 1)
 
 
         # State
@@ -280,23 +325,65 @@ class ModelTab(Tab):
                 self.getProject().modelSelected.downstreamCondition = AVAILABLE_LIMITS[i]
 
     def upstreamValueChanged(self, v):
-            if self.getProject().modelSelected != None:
-                self.getProject().modelSelected.upstreamCondition = self.upstreamDoubleSpinBox.value()
+        if self.getProject().modelSelected != None:
+            self.getProject().modelSelected.upstreamCondition = self.upstreamDoubleSpinBox.value()
 
     def downstreamValueChanged(self, v):
-            if self.getProject().modelSelected != None:
-                self.getProject().modelSelected.downstreamCondition = self.downstreamDoubleSpinBox.value()
+        if self.getProject().modelSelected != None:
+            self.getProject().modelSelected.downstreamCondition = self.downstreamDoubleSpinBox.value()
+
+    def cflChanged(self):
+        if self.getProject().modelSelected != None:
+            dlg = DialogCFL(parent=self)
+            if dlg.exec():
+                self.getProject().modelSelected.cfl = dlg.currentCfl
+                self.setChangeCFLButtonText()
+
+    def dtMethodChanged(self):
+        b = self.dtMethodCheckBox.isChecked()
+        self.CFLLabel.setVisible(b)
+        self.changeCFLButton.setVisible(b)
+        self.dtLabel.setVisible(not(b))
+        self.dtDoubleSpinBox.setVisible(not(b))
+        m = self.getProject().modelSelected
+        if m != None:
+            m.dt = None if b else self.dtDoubleSpinBox.value() 
+
+    def dtChanged(self, v):
+        m = self.getProject().modelSelected
+        if m != None:
+            m.dt = v
+
+    def setChangeCFLButtonText(self):
+        m = self.getProject().modelSelected
+        if m != None:
+            self.changeCFLButton.setText(f"c = {m.cfl} \t (Modifier)")
+        else:
+            self.changeCFLButton.setText(f"")
+
+    def savingChanged(self):
+        b = self.savingCheckBox.isChecked()
+        self.savingTimeStepDoubleSpinBox.setVisible(not(b))
+        self.savingTimeStepLabel.setVisible(not(b))
+        m = self.getProject().modelSelected
+        if m != None:
+            m.dtForSave = None if b else self.savingTimeStepDoubleSpinBox.value()
+    
+    def dtForSaveChanged(self, v):
+        m = self.getProject().modelSelected
+        if m != None:
+            m.dtForSave = v
 
     def modelChoiceChanged(self, s):
         self.setModelLayout(self.getProject().getModel(s))
         
     def setModelList(self):
+        mSelected = self.getProject().modelSelected
         self.modelList.clear()
         for i, m in enumerate(self.getProject().modelList):
-            item = QListWidgetItem(m.name)
-            self.modelList.addItem(item)
-            if i == self.getProject().modelSelectedIndex:
-                self.modelList.setCurrentItem(item)
+            self.modelList.addItem(m.name)
+            if m == mSelected:
+                self.modelList.setCurrentRow(i)
         return
 
     def refresh(self):
@@ -331,7 +418,6 @@ class ModelTab(Tab):
         self.modelWidget.setVisible(True)
         self.makeModelLayoutBlank()
         p = self.getProject()
-        model
 
         nameList = p.getHydrogramNameList()
         index = p.hydrogramSelectedIndex
@@ -399,7 +485,22 @@ class ModelTab(Tab):
         else:
             model.downstreamCondition = self.downstreamConditionComboBox.currentText()
 
+        if model.dt == None:
+            self.dtDoubleSpinBox.setValue(1)
+            self.dtMethodCheckBox.setChecked(True)
+        else:
+            self.dtDoubleSpinBox.setValue(model.dt)
+            self.dtMethodCheckBox.setChecked(False)
+
+        if model.dtForSave == None:
+            self.savingTimeStepDoubleSpinBox.setValue(1)
+            self.savingCheckBox.setChecked(True)
+        else:
+            self.savingTimeStepDoubleSpinBox.setValue(model.dtForSave)
+            self.savingCheckBox.setChecked(False)
+
         p.setModelSelected(model.name)
+        self.setChangeCFLButtonText()
         self.updateText()
         return
 

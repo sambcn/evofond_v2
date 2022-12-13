@@ -11,8 +11,10 @@ from front.MplCanvas import MplCanvas, NavigationToolbar
 from front.DialogNewSedimentogram import DialogNewSedimentogram
 from front.DialogDelete import DialogDelete
 from front.DialogQuestionAnswer import DialogQuestionAnswer
-
 from utils import getAccumulatedVolume
+
+import numpy as np
+import pandas as pd
 
 class SedimentogramTab(Tab):
     
@@ -68,6 +70,7 @@ class SedimentogramTab(Tab):
         self.hydrogramList = QComboBox()
         self.setHydrogramList()
         self.plotLabel = QLabel()
+        self.plotLabel.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.layoutPlot.addWidget(self.plotHydrogramDataCheckbox, alignment=Qt.AlignTop)
         self.layoutPlot.addWidget(self.hydrogramList, alignment=Qt.AlignTop)
         self.layoutPlot.addWidget(self.plotLabel, alignment=Qt.AlignTop)
@@ -265,8 +268,9 @@ class SedimentogramTab(Tab):
             df = self.getProject().sedimentogramSelected.data
 
         subdf = df[~(df[df.columns[0]].isnull()) & ~(df[df.columns[1]].isnull())]
-        lines += a.plot(subdf[subdf.columns[0]], subdf[subdf.columns[1]], label="Débit", color="orange")
-        a.set_xlabel(subdf.columns[0])
+        timeInHour = np.array(subdf[subdf.columns[0]])/3600
+        lines += a.plot(timeInHour, subdf[subdf.columns[1]], label="Débit [m3/s]", color="orange")
+        a.set_xlabel("t [h]")
         a.set_ylabel(subdf.columns[1])
         a.relim()
         a.autoscale()
@@ -274,34 +278,33 @@ class SedimentogramTab(Tab):
         twinAx = a.twinx()
         vAccumulated = getAccumulatedVolume(subdf[subdf.columns[0]], subdf[subdf.columns[1]])
         hydroName = self.hydrogramList.currentText()
-        dfHydro = self.getProject().getHydrogram(hydroName).data
-        subdfHydro = dfHydro[~(dfHydro[dfHydro.columns[0]].isnull()) & ~(dfHydro[dfHydro.columns[1]].isnull())]
-        vWaterAccumulated = getAccumulatedVolume(subdfHydro[subdfHydro.columns[0]], subdfHydro[subdfHydro.columns[1]])
-
-        if self.plotHydrogramDataCheckbox.isChecked():
-            lines += twinAx.plot(subdfHydro[subdfHydro.columns[0]], subdfHydro[subdfHydro.columns[1]], label="Débit liquide", color="blue", linestyle="dashed")
+        hydroExists = hydroName in self.getProject().getHydrogramNameList()
+        if hydroExists:
+            dfHydro = self.getProject().getHydrogram(hydroName).data 
+            subdfHydro = dfHydro[~(dfHydro[dfHydro.columns[0]].isnull()) & ~(dfHydro[dfHydro.columns[1]].isnull())]
+            timeInHourHydro = np.array(subdfHydro[subdfHydro.columns[0]])/3600
+            vWaterAccumulated = getAccumulatedVolume(subdfHydro[subdfHydro.columns[0]], subdfHydro[subdfHydro.columns[1]])
+        
+        if self.plotHydrogramDataCheckbox.isChecked() and hydroExists:
+            lines += twinAx.plot(timeInHourHydro, subdfHydro[subdfHydro.columns[1]], label="Débit liquide [m3/s]", color="blue", linestyle="dashed")
             twinAx.set_ylabel(subdfHydro.columns[1])
         else:
-            lines += twinAx.plot(subdf[subdf.columns[0]], vAccumulated, label="Volume cumulé", color="orange", linestyle="dashdot")
-            twinAx.set_ylabel("Volume cumulé (m3)")
+            lines += twinAx.plot(timeInHour, vAccumulated, label="Volume cumulé [m3]", color="orange", linestyle="dashdot")
+            twinAx.set_ylabel("Volume cumulé [m3]")
         
-        if len(vAccumulated) > 0 and len(vWaterAccumulated) > 0:
+        if len(vAccumulated) > 0 and hydroExists and len(vWaterAccumulated) > 0 :
             self.plotLabel.setText(f"Volume solide cumulé : {vAccumulated[-1]:.3f}m3\nVolume liquide cumulé : {vWaterAccumulated[-1]:.3f}m3\nConcentration volumique (m3/m3) : {vAccumulated[-1]/vWaterAccumulated[-1]:.3f}")
         a.legend(lines, [l.get_label() for l in lines])
         self.sc.draw()
         return
-
-    def makeSedimentogramListEmpty(self):
-        for i in range(self.sedimentogramList.count()-1, -1, -1):
-            self.sedimentogramList.takeItem(i)
-        return
         
     def setSedimentogramList(self):
-        self.makeSedimentogramListEmpty()
+        sSelected = self.getProject().sedimentogramSelected
+        self.sedimentogramList.clear()
         for i, s in enumerate(self.getProject().sedimentogramList):
-            item = QListWidgetItem(s.name)
-            item.setSelected(i == self.getProject().sedimentogramSelectedIndex)
-            self.sedimentogramList.addItem(item)
+            self.sedimentogramList.addItem(s.name)
+            if s == sSelected:
+                self.sedimentogramList.setCurrentRow(i)
         return
 
     def setHydrogramList(self):
@@ -310,6 +313,6 @@ class SedimentogramTab(Tab):
         self.hydrogramList.addItems(self.getProject().getHydrogramNameList())
 
     def refresh(self):
-        self.setSedimentogramList()
         self.setHydrogramList()
+        self.setSedimentogramList()
         return

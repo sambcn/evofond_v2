@@ -30,6 +30,7 @@ class ProjectTab(Tab):
         self.saveAsProjectButton.setIcon(QIcon(self.getResource("images\\saveAs.png")))
         self.saveAsProjectButton.released.connect(self.saveAsProjectButtonReleased)
         self.text = QLabel(str(self.currentProject))
+        self.text.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.editTextButton = QPushButton(" Modifier")
         self.editTextButton.setIcon(QIcon(self.getResource("images\\edit.png")))
         self.editTextButton.released.connect(self.editTextButtonRealeased)
@@ -79,8 +80,9 @@ class ProjectTab(Tab):
                 gc.enable()
                 f.close()
                 self.tabBar.refresh()
-            except (AttributeError, EOFError):
+            except (AttributeError, EOFError) as e:
                 QMessageBox.critical(self, "Impossible d'ouvrir ce fichier", "Le fichier sélectionné est corrompu, impossible de le lire")
+                print(str(e))
         return
 
     def saveProjectButtonReleased(self):
