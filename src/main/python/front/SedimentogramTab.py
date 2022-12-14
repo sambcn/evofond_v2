@@ -68,6 +68,7 @@ class SedimentogramTab(Tab):
         self.plotHydrogramDataCheckbox = QCheckBox(" Afficher les données hydrauliques")
         self.plotHydrogramDataCheckbox.stateChanged.connect(self.plotHydrogramDataCheckboxChecked)
         self.hydrogramList = QComboBox()
+        self.hydrogramList.currentTextChanged.connect(self.plotData)
         self.setHydrogramList()
         self.plotLabel = QLabel()
         self.plotLabel.setTextInteractionFlags(Qt.TextSelectableByMouse)

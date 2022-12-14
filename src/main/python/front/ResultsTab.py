@@ -252,7 +252,7 @@ class ResultsTab(Tab):
         self.resultQList.addItems(self.getResultNameList())
 
     def refresh(self):
-        self.setResultList()
+        return
 
     def plotProfileDataButtonReleased(self):
         dlg = DialogPlotProfileDataOnResults(parent=self)

@@ -168,7 +168,7 @@ class DialogNewHydrogram(QDialog):
         self.doubleBoxQmin.setMaximum(v)
 
     def lavabreTmaxChanged(self, v):
-        self.hydroArgs["tmax"] = v
+        self.hydroArgs["tmax"] = v*3600
 
     def lavabreAlphaChanged(self, v):
         self.hydroArgs["alpha"] = v
