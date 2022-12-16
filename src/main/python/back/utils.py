@@ -7,6 +7,12 @@ Y_MIN = 0.001 # To avoid 0 on water depth, we assume that there is at least one 
 
 # Functions
 
+def calcSedimentogram(law, QList, width, slope, granulometry):
+    QsList = []
+    for Q in QList:
+        QsList.append(law.compute_Qs_formula(width, granulometry, Q, slope))
+    return QsList
+
 def hydrogrammeLavabre(Qmax,tm,alpha,Qbase,t):
     """
     returns water discharge array matching t such that there is a maximum Qmax reached at tm by a alpha degree curve.
