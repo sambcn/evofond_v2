@@ -269,7 +269,7 @@ class Profile():
         return min(dt_list)
 
     @Performance.measure_perf
-    def update_bottom(self, Q, y, QsIn0, dt, law, plot=False, friction_law="Ferguson"):
+    def update_bottom(self, Q, y, QsIn0, dt, law, plot=False, friction_law="Ferguson", Qs_injection=None):
         """
         Q = water discharge
         y = list of water depth  for every section
@@ -277,6 +277,8 @@ class Profile():
         dt = time step (how long last this step, used to compute volumes from discharges)
         Compute the sediment discharge at the downstream and change the attribute __z for every section
         """
+        if Qs_injection == None:
+            Qs_injection = [0 for _ in range(self.get_nb_section())]
         z0 = self.get_z_list()
         QsIn = QsIn0
         if plot:
@@ -288,7 +290,8 @@ class Profile():
                 y_down = y[i]
             else:
                 y_down = y[i+1]
-            QsIn = section.update_bottom(Q, y_up, y[i], y_down, QsIn, dt, law)
+
+            QsIn = section.update_bottom(Q, y_up, y[i], y_down, QsIn+Qs_injection[i], dt, law)
             y_up = y[i]
 
         if plot:
@@ -348,7 +351,7 @@ class Profile():
 
         index_list = []
         for injection in injection_list:
-            x_injection, t_injection, Q_injection = injection
+            x_injection, t_injection, Q_injection, Qs_injection = injection
             x_list = self.get_x_list()
             x_injection = min(x_list) + max(x_list) - x_injection
             for i, xi in enumerate(x_list):
@@ -360,10 +363,13 @@ class Profile():
             
             Q = np.interp(t, t_hydrogram, hydrogram)
             Q_injected = [0 for i in range(self.get_nb_section())]
+            Qs_injected = [0 for i in range(self.get_nb_section())]
             for index, injection in zip(index_list, injection_list):
-                x_injection, t_injection, Q_injection = injection
+                x_injection, t_injection, Q_injection, Qs_injection = injection
                 Q_value = np.interp(t, t_injection, Q_injection)
+                Qs_value = np.interp(t, t_injection, Qs_injection)
                 Q_injected[index] += Q_value
+                Qs_injected[index] += Qs_value
                 
             ### Q = 0 => nothing happens, we skip
             if Q <= 10**(-3):
@@ -443,8 +449,8 @@ class Profile():
                     t_save = t + dt_save
 
 
-            V_in += QsIn0*dt
-            QsOut = self.update_bottom(Q, y_list, QsIn0, dt, law, friction_law=friction_law)
+            V_in += (QsIn0+sum(Qs_injected))*dt
+            QsOut = self.update_bottom(Q, y_list, QsIn0, dt, law, friction_law=friction_law, Qs_injection=Qs_injected)
             V_out += QsOut*dt
 
             t += dt
@@ -609,7 +615,7 @@ class Profile():
 
         result = dict()
         # x.reverse()
-        result["abscissa"] = x
+        result["abscissa"] = [float(xi) for xi in x] # because numpy int64 cause some probs in json dump 
         # result["animation"] = ani if animate else None
         result["water_depth"] = y_matrix
         result["bottom_height"] = z_matrix
@@ -620,10 +626,13 @@ class Profile():
         result["sediment_discharge"] = Qs_history
         result["critical_depth"] = yc_history
         # result["normal_depth"] = yn_history
-        result["width"] = b_history
+        result["width"] = [[float(bit) for bit in bt] for bt in b_history] # idem
         result["volume_in"] = V_in
         result["volume_out"] = V_out
         result["volume_stored"] = stored_volume
+        result["name"] = self.get_name()+"_"+str(time())
+        result["model"] = "no model"
+        result["saved"] = False
         
         return result
 

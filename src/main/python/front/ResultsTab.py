@@ -159,11 +159,11 @@ class ResultsTab(Tab):
             waitingWindow.setAttribute(Qt.WA_DeleteOnClose)
             # waitingWindow.setStandardButtons(QMessageBox.NoButton)
             waitingWindow.setWindowFlag(Qt.WindowCloseButtonHint, False)
-            waitingWindow.show()            
+            waitingWindow.show()       
+            self.currentResult["saved"] = True     
             json.dump(self.currentResult, f)
             waitingWindow.close()            
             f.close()
-            self.currentResult["saved"] = True
             QMessageBox.information(self, "Résultat sauvegardé", "Le résultat a été sauvegardé avec succès !")
         return
 

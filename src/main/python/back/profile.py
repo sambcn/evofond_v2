@@ -123,7 +123,7 @@ class Profile():
         yc_current = yc_list[i_current]
         while i_current < n-1:
             H_next = section_list[i_current+1].get_H(Q_list[i_current+1], y_list[i_current+1])
-            if H_next - H_current > 10**(-3):
+            if ((H_next - H_current) - 10**(-3)) > 0:
                 try:
                     y_supercritical = section_current.get_y_from_Hs(Q_current, H_next-z_current, True, yc_current)
                     Fs_supercritical = section_current.get_Fs(Q_current, y_supercritical)
@@ -281,7 +281,7 @@ class Profile():
         QsIn = QsIn0
         if plot:
             V0 = self.get_stored_volume()
-            fig = self.plot(Q=Q, y=y, friction_law=friction_law)
+            fig = self.plot(Q_list=[Q for _ in range(self.get_nb_section())], y=y, friction_law=friction_law)
         y_up = y[0]
         for i, section in enumerate(self.__section_list):
             if section.is_downstream():
