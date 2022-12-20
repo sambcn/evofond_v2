@@ -7,6 +7,7 @@ class LefortSogreah1991(SedimentTransportLaw):
         return
 
     def compute_Qs_formula(self, b, granulometry, Q, I):
+        Q = max(0.001, Q)
         dm = granulometry.dm
         d90 = granulometry.d90
         d30 = granulometry.d30

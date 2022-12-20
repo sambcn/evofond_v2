@@ -7,6 +7,7 @@ class Lefort2015(SedimentTransportLaw):
         return
 
     def compute_Qs_formula(self, b, granulometry, Q, I):
+        Q = max(0.001, Q)
         dm = granulometry.dm
         Gr = granulometry.Gr
         dms=dm*(9.81*1.65/0.000001**2)**(1./3.)
