@@ -111,5 +111,8 @@ class TableModel(QAbstractTableModel):
     def restore(self):
         self._object.data = self.backup
         self.layoutChanged.emit()
-        self.tab.updateVarLists()
+        try:
+            self.tab.updateVarLists()
+        except AttributeError:
+            pass
         self.tab.plotData()

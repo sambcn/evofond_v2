@@ -115,7 +115,7 @@ class SedimentogramTab(Tab):
     
     def contextMenuOnTable(self, pos):
         context = QMenu(self)
-        copy = QAction("Copier", self.table)
+        copy = QAction("Copier", self.sedimentogramData)
         copy.triggered.connect(self.model.copy)
         context.addAction(copy)
         if self.editing:
