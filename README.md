@@ -8,7 +8,7 @@ Go on the git to work with source code : https://github.com/sambcn/evofond_v2
 
 If you just want the application, you can download the following zip :
 
-Evofond V0 : https://drive.google.com/file/d/1xfsp9qYRfuhmhrSzmGClgykUCYwSy-nq/view?usp=sharing 
+Evofond V1 : https://drive.google.com/file/d/1wRhQxK6ZVoNoHPNy6Qelc6ZSQO3yPraU/view?usp=share_link
 
 ## Working with code source
 
